@@ -6,6 +6,9 @@ import Facilities from "./pages/Facilities";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Signup from "./pages/Signup";
+
+
 
 function App() {
   return (
@@ -19,6 +22,7 @@ function App() {
 
       {/* Standalone route (without layout if you want a clean login page) */}
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
