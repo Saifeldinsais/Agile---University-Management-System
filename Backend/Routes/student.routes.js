@@ -4,7 +4,8 @@ const Router = express.Router();
 
 
 
-Router.post("/signup",StudentControllers.signup);
+Router.post("/signup",StudentControllers.signUp);
+Router.post("/signin",StudentControllers.signIn);
 
 
 

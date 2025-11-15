@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const JWT = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
-const signup = async(req,res)=>{
+const signUp = async(req,res)=>{
     try{
         let {username,email,password,confirmpassword} = req.body;
         if(!username || !email || !password || !confirmpassword){
@@ -23,7 +23,11 @@ const signup = async(req,res)=>{
         })
 
 
-        const token = JWT.sign({ password: newStudent.password, username: newStudent.username }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION });
+        const token = JWT.sign(
+            { password: newStudent.password, username: newStudent.username }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: process.env.JWT_EXPIRATION });
+
         res.status(201).json({
             status: "Success",
             data: { user: newStudent  },
@@ -34,6 +38,43 @@ const signup = async(req,res)=>{
 
     }
 }
+const signIn = async(req,res) => {
+    try{
+        const {email , password} = req.body;
+        if(!email || !password){
+            return res.status(400).json({message: "Email And Password Required"});
+        }
+        const student = await Student.findOne({email:email});
+        if(!student){
+            return res.status(400).json({message: "Invalid email or password"});
+        }
+        const isMatch = await bcrypt.compare(password , student.password)
+        if(!isMatch){
+            return res.status(400).json({message: "Invalid email or password"});
+        }
+
+        const token = JWT.sign(
+            { username: student.username, password: student.password },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRATION }
+        );
+
+        res.status(200).json({
+            status: "Success",
+            data: { user: student},
+            token: token,
+        });
+
+    }catch(error){
+        res.status(400).json({ status: "Fail" , message: error.message || "An error occurred"});
+    }
+
+}
+
+
+
+
 module.exports = {
-    signup
+    signUp,
+    signIn
 }
