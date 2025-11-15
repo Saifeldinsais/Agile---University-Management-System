@@ -19,9 +19,14 @@ function Navbar() {
         </NavLink>
       </nav>
       <div className="navbar-actions">
+        <NavLink to="/signup" className={linkClass}>
+          Sign Up
+        </NavLink>
+
         <NavLink to="/login" className={linkClass}>
           Login
         </NavLink>
+
       </div>
     </header>
   );
