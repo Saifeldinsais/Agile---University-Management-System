@@ -1,5 +1,6 @@
 const Classroom = require("../Models/classroom.model");
 const Admin = require("../Models/admin.model");
+const Course = require("../Models/course.model");
 const JWT = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
@@ -73,7 +74,13 @@ const signIn = async(req,res) => {
 const createClassroom = async (req, res) => {
     try {
         const { roomName, capacity, type, equipment, availabilitySchedule } = req.body;
-
+        if (!roomName || !capacity || !type) {
+            return res.status(400).json({ message: "Required fields are missing" });
+        }
+        const existingClassroom = await Classroom.findOne({ roomName: roomName });
+        if (existingClassroom) {
+            return res.status(400).json({ message: "Classroom with this name already exists" });
+        }
         const classroom = await Classroom.create({
             roomName,
             capacity,
@@ -137,6 +144,52 @@ const deleteClassroom = async (req, res) => {
     }
 }
 
+
+const createCourse = async (req,res)=>{
+    try{
+         const{title,code,description,credits,department} = req.body;
+         if(!title || !code || !credits || !department){
+            return res.status(400).json({message: "Required fields are missing"});
+         }
+
+         const existingCourse = await Course.findOne({code:code});
+         if(existingCourse){
+            return res.status(400).json({message: "Course with this code already exists"});
+         }
+            const newCourse = await Course.create({
+                title,
+                code,
+                description,
+                credits,
+                department
+            }); 
+        res.status(201).json({
+            status: "Success",
+            data: { course: newCourse  },
+        });
+
+    }catch(error){
+        res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
+    }
+   
+
+}
+
+const deleteCourse = async(req,res)=>{
+   try{
+    const deletedcourse = await Course.findByIdAndDelete(req.params.id);
+
+    if(!deletedcourse){
+        return res.status(404).json({status: "fail", message: "Course not found"});
+    }
+    const courses = await Course.find();
+
+    res.status(200).json({status: "success", data: courses})
+   }catch(error){
+        res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
+    }
+}
+
 module.exports = {
-    createClassroom, getClassrooms, updateClassroom, deleteClassroom ,signIn
+    createClassroom, getClassrooms, updateClassroom, deleteClassroom ,signIn , createCourse , deleteCourse
 }

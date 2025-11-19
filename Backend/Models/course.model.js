@@ -21,6 +21,7 @@ const courseSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
+      max: 5,
     },
     department: {
       type: String,
