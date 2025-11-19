@@ -8,7 +8,7 @@ username  : {
     required: [true, "Username is required"],
     unique: true,
     trim: true,
-   maxlength : [40, "Username must be at most 40 characters long"]
+    maxlength : [40, "Username must be at most 40 characters long"]
 },
 email: {
     type: String,
