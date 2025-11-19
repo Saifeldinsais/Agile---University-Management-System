@@ -1,8 +1,8 @@
 import { apiClient } from "./apiClient";
 
 
-const LOGIN_URL = "/student/signin";
-const REGISTER_URL = "/student/signup";
+const LOGIN_URL = "/auth/signin";
+const REGISTER_URL = "/auth/signup";
 const ADMIN_LOGIN_URL = "/admin/signinAdmin";
 
 async function loginUser(credentials) {
