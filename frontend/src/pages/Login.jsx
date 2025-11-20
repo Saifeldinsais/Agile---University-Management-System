@@ -8,17 +8,26 @@ function Login() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
 
-
   async function handleSubmit(e) {
     e.preventDefault();
     setStatus("Loading...");
 
     try {
       const data = await loginUser({ email, password });
-      setStatus("Login successful!");
-      const adminCheck = data.data.user.email.toLowerCase().includes('@admin');
+      // data = { status, data: { user }, token }
 
-      if (adminCheck) {
+      setStatus("Login successful!");
+
+      // save token (optional but useful)
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      localStorage.setItem("email", data.data.user.email);
+
+      const isAdmin = data.data.user.email.toLowerCase().includes("@admin");
+
+      if (isAdmin) {
+        // ✅ ADMIN REDIRECT HERE
         navigate("/admin/dashboard");
       } else {
         navigate("/");
@@ -62,8 +71,9 @@ function Login() {
 
       {status && (
         <p
-          className={`auth-status ${status.includes("successful") ? "success" : "error"
-            }`}
+          className={`auth-status ${
+            status.toLowerCase().includes("success") ? "success" : "error"
+          }`}
         >
           {status}
         </p>

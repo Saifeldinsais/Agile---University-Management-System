@@ -1,19 +1,10 @@
 import { apiClient } from "./apiClient";
 
-
 const LOGIN_URL = "/auth/signin";
 const REGISTER_URL = "/auth/signup";
-const ADMIN_LOGIN_URL = "/admin/signinAdmin";
 
 async function loginUser(credentials) {
-
-  if(credentials.email.toLowerCase().includes('@admin')){
-    console.log("Admin login detected")
-    const response = await apiClient.post(ADMIN_LOGIN_URL, credentials);
-    return response.data;
-  }
-
-  console.log("user login detected")
+  // ALWAYS use /auth/signin – backend decides role (admin/student/doctor)
   const response = await apiClient.post(LOGIN_URL, credentials);
   return response.data;
 }
@@ -23,6 +14,4 @@ async function registerUser(data) {
   return response.data;
 }
 
-export{
-  loginUser, registerUser
-}
+export { loginUser, registerUser };

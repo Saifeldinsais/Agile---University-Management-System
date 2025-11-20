@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../Controllers/admin.controller');
 
-// // router.post("/signupAdmin",adminController.signUp);   // used one time to create admin in database 
+// router.post("/signupAdmin",adminController.signUp);   // used one time to create admin in database 
 // router.post("/signinAdmin",adminController.signIn);
 
+router.post("/classrooms/:roomId/timeslots", adminController.addTimeSlot);
+router.patch("/classrooms/:roomId/timeslots/:slotId", adminController.updateTimeSlot);
+router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTimeSlot);
 
 
 router.route('/classrooms')
