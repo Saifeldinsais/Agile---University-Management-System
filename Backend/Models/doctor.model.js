@@ -38,5 +38,5 @@ doctorSchema.pre("save", async function(next) {
   next();
 });
 
-const Doctor = mongoose.model("Doctors",doctorSchema);
+const Doctor = mongoose.model("Doctor",doctorSchema);
 module.exports = Doctor;

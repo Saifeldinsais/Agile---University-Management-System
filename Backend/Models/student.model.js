@@ -41,6 +41,6 @@ studentSchema.pre("save", async function(next) {
 });
 
 
-const Student = mongoose.model("Students",studentSchema);
+const Student = mongoose.model("Student",studentSchema);
 
 module.exports = Student;

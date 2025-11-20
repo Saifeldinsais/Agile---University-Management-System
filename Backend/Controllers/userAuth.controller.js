@@ -3,6 +3,8 @@ const bcrypt = require("bcryptjs");
 
 const Admin = require("../Models/admin.model");
 const Student = require("../Models/student.model");
+const Doctor = require("../Models/doctor.model");
+
 
 const signUp = async (req, res) => {
     try {
@@ -18,6 +20,8 @@ const signUp = async (req, res) => {
             return res.status(400).json({ message: "You cannot use an email that contains '@admin'" });
         }
 
+
+        if((email.toLowerCase().includes("@ums-student"))){
         let existingstudent = await Student.findOne({ email: email });
         if (existingstudent) {
             return res.status(400).json({ message: "Student with this email already exists" });
@@ -26,10 +30,8 @@ const signUp = async (req, res) => {
             username,
             email,
             password,
-        })
-
-
-        const token = JWT.sign(
+        }) 
+         const token = JWT.sign(
             { id: newStudent._id, username: newStudent.username },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRATION });
@@ -39,6 +41,34 @@ const signUp = async (req, res) => {
             data: { user: newStudent },
             token: token,
         });
+        }
+        else if(email.toLowerCase().includes("@ums-doctor"))
+        {
+            let existingdoctor = await Doctor.findOne({ email: email });
+            if (existingdoctor) {   
+                return res.status(400).json({ message: "Doctor with this email already exists" });
+            }
+            const newDoctor = await Doctor.create({
+                username,
+                email,
+                password,
+            })
+            const token = JWT.sign(
+                { id: newDoctor._id, username: newDoctor.username },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRATION }); 
+            res.status(201).json({
+                status: "Success",
+                data: { user: newDoctor },
+                token: token,
+            });
+        }      
+        else {
+           return res.status(404).json({ message: "Invalid email domain for registration" });
+        }
+
+
+       
     } catch (error) {
         res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
 
@@ -75,7 +105,8 @@ const signIn = async (req, res) => {
                 token: token,
             });
         } else {
-            const student = await Student.findOne({ email: email });
+            if (email.toLowerCase().includes("@ums-student")) {
+                const student = await Student.findOne({ email: email });
             if (!student) {
                 return res.status(400).json({ message: "Invalid email or password" });
             }
@@ -94,7 +125,32 @@ const signIn = async (req, res) => {
                 status: "Success",
                 data: { user: student },
                 token: token,
-            });
+            });                
+            }
+            else if (email.toLowerCase().includes("@ums-doctor")) {
+                const doctor = await Doctor.findOne({ email: email });
+                if (!doctor) {
+                    return res.status(400).json({ message: "Invalid email or password" });
+                }
+                const isMatch = await bcrypt.compare(password, doctor.password)
+                if (!isMatch) {
+                    return res.status(400).json({ message: "Invalid email or password" });
+                }
+                const token = JWT.sign(
+                    { id: doctor._id, username: doctor.username, role: "doctor" },
+                    process.env.JWT_SECRET,
+                    { expiresIn: process.env.JWT_EXPIRATION }
+                );
+                res.status(200).json({
+                    status: "Success",
+                    data: { user: doctor },
+                    token: token,
+                });
+            }
+            else {
+                return res.status(404).json({ message: "Invalid email domain for sign in" });
+            }          
+            
         }
     } catch (error) {
         res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
