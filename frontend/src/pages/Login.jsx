@@ -18,7 +18,7 @@ function Login() {
       setStatus("Login successful!");
 
       localStorage.setItem("studentId" , data.data.user._id);
-      localStorage.setItem("student" , data.data.user);
+      localStorage.setItem("student" , JSON.stringify(data.data.user));
       
       const adminCheck = data.data.user.email.toLowerCase().includes('@admin');
       const studentCheck = data.data.user.email.toLowerCase().includes("@ums-student");
