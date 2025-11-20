@@ -10,9 +10,19 @@ const adminController = require('../Controllers/admin.controller');
 router.route('/classrooms')
   .post(adminController.createClassroom)
   .get(adminController.getClassrooms);
+ 
 
 router.route('/classrooms/:id')
   .patch(adminController.updateClassroom)
   .delete(adminController.deleteClassroom);
+
+router.route("/courses")
+.post(adminController.createCourse)
+
+
+router.route("/courses/:id")
+.delete(adminController.deleteCourse);
+
+
 
 module.exports = router;

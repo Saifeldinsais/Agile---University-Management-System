@@ -19,10 +19,22 @@ const classroomSchema = new mongoose.Schema({
         required: [true, "Type is required"]
     },
     availabilitySchedule: {
-        type: [String],
+        type: [String],  // ["Mon 09:00-11:00", "Wed 14:00-16:00", "Fri 08:00-10:00"]
         default: []
-    }
-});
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    isbooked: {
+        type: Boolean,
+        default: false
+    },
+    requested_by: [{                
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Doctors",
+    }]
+    });
 
 const Classroom = mongoose.model("Classrooms", classroomSchema);
 module.exports = Classroom;
