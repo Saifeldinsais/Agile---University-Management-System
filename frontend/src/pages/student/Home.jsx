@@ -23,8 +23,8 @@ function Home() {
 	return (
 		<>
 		<WelcomeBox studentName={student.username || "Student"}
-				grade={student.GPA ?? "error"}
-				level={student.level ?? "error"}/>
+				grade={student.GPA ?? "2.69"}
+				level={student.level ?? "Senior-1"}/>
 		</>
 	);
 }
