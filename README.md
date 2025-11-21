@@ -161,4 +161,177 @@ This README includes:
 
 ---
 
+# 🔧 Functionalities Implemented So Far
+
+This section summarizes all backend and frontend features that are fully implemented at this stage of the University Management System.
+
+---
+
+## 🧑‍🎓 Student Authentication
+
+- Student Sign Up (with email + password)
+
+- Student Login (JWT authentication)
+
+- Password hashing using bcrypt
+
+- Email validation + duplicate email prevention
+
+- Rejects any student email containing "@admin" for security
+
+## 🧑‍💼 Admin Features
+
+Admins are created manually by the system (no public signup).
+
+✔ Admin Login
+
+- Secure login using JWT
+
+- Password hashing & verification
+
+## 🏫 Classroom Management (Admin)
+✔ Create Classroom
+
+- Create hall/lab with:
+
+    - roomName
+
+    - capacity
+
+    - type
+
+    - optional bookedSchedule
+
+- Validation for duplicates & constraints
+
+✔ View All Classrooms
+
+- Returns all classrooms with full details.
+
+✔ Update Classroom
+
+- Admin can edit:
+
+    - capacity
+
+    - type
+
+    - isWorking (maintenance mode)
+
+    - any other field
+
+✔ Delete Classroom
+
+- Deletes classroom by ID
+
+- Returns updated list
+
+✔ Classroom Status
+
+Returns:
+
+- working / not working state
+
+- all booked time slots
+
+- which doctor booked each slot
+
+✔ Assign Classroom to Doctor
+
+- Doctor + Timeslot assignment
+
+- Prevents double booking of same timeslot
+
+- Prevents booking if classroom is under maintenance (isWorking === false)
+
+- Automatically records doctor in requested_by
+
+✔ Unassign Classroom
+
+- Removes booking from bookedSchedule
+
+- Removes doctor from requested_by
+
+- Checks:
+
+    - timeslot exists
+
+    - doctor matches the one who booked it (safe index check)
+
+## 📚 Course Management (Admin)
+✔ Create Course
+
+- Fields: title, code, credits, department, description
+
+- Prevents duplicate codes
+
+✔ Update Course
+
+- Admin can update any course field
+
+✔ Delete Course
+
+- Deletes by ID
+
+- Returns updated list
+
+✔ Assign Course to Doctor
+
+- Adds course to doctor’s courses[]
+
+- Checks duplicates safely (ObjectId safe compare)
+
+✔ Unassign Course from Doctor
+
+- Removes course from doctor’s courses[]
+
+- Prevents unassigning a non-assigned course
+
+🖥️ Frontend Functionality (React + Vite)
+✔ Authentication Pages
+
+- Student signup
+
+- Student/admin login
+
+- Frontend detects:
+
+    - If email contains @admin → call admin login endpoint
+
+    - Otherwise → student login
+
+✔ Navigation Based on User Role
+
+- Students → navigate to /
+
+- Admins → navigate to /admin/dashboard
+
+✔ Layout + Routing
+
+- Global layout with Navbar using <Outlet />
+
+- Pages:
+
+    - Home
+
+    - Facilities
+
+    - Dashboard
+
+    - Admin Dashboard
+
+    - Login
+
+    - Signup
+
+    - NotFound
+
+✔ Axios API Layer
+
+- Centralized Axios client (apiClient.js)
+
+- Error interceptor included
+
+- Environment-based API URL via VITE_API_BASE_URL
+
 # 🎯 End of README
