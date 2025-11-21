@@ -161,7 +161,7 @@ const getClassroomStatus = async (req, res) => {
 }
 
 
-//==================== courses functions
+//==================== courses functions =========================
 
 
 const createCourse = async (req, res) => {
@@ -223,6 +223,23 @@ const updateCourse = async (req, res) => {
         return res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
     }
 }
+
+const getCourses = async (req, res) => {
+  try {
+    const courses = await Course.find();
+
+    return res.status(200).json({
+      status: "success",
+      data: courses,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: error.message || "An error occurred",
+    });
+  }
+};
+
 
 //==================== assgining functions
 
@@ -388,6 +405,120 @@ const unassignCourseFromDoctor = async (req, res) => {
 }
 
 
+// Add time slot to a classroom
+const addTimeSlot = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { day, start, end, doctorEmail } = req.body;
+
+    if (!day || !start || !end || !doctorEmail) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const classroom = await Classroom.findById(roomId);
+    if (!classroom) {
+      return res.status(404).json({ message: "Classroom not found" });
+    }
+
+    // prevent overlapping in same day
+    const conflict = classroom.timeSlots.some((slot) => {
+      if (slot.day !== day) return false;
+      // if new range overlaps existing
+      return !(end <= slot.start || start >= slot.end);
+    });
+
+    if (conflict) {
+      return res
+        .status(400)
+        .json({ message: "Time slot conflicts with existing schedule" });
+    }
+
+    classroom.timeSlots.push({ day, start, end, doctorEmail });
+    await classroom.save();
+
+    res.status(201).json({
+      status: "success",
+      data: { classroom },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error adding time slot" });
+  }
+};
+
+// Edit (update) time slot
+const updateTimeSlot = async (req, res) => {
+  try {
+    const { roomId, slotId } = req.params;
+    const { day, start, end, doctorEmail } = req.body;
+
+    const classroom = await Classroom.findById(roomId);
+    if (!classroom) {
+      return res.status(404).json({ message: "Classroom not found" });
+    }
+
+    const slot = classroom.timeSlots.id(slotId);
+    if (!slot) {
+      return res.status(404).json({ message: "Time slot not found" });
+    }
+
+    // check conflict with OTHER slots
+    const conflict = classroom.timeSlots.some((s) => {
+      if (s._id.toString() === slotId) return false;
+      if (s.day !== day) return false;
+      return !(end <= s.start || start >= s.end);
+    });
+
+    if (conflict) {
+      return res
+        .status(400)
+        .json({ message: "Time slot conflicts with existing schedule" });
+    }
+
+    slot.day = day;
+    slot.start = start;
+    slot.end = end;
+    slot.doctorEmail = doctorEmail;
+    await classroom.save();
+
+    res.json({
+      status: "success",
+      data: { classroom },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error updating time slot" });
+  }
+};
+
+// Delete time slot
+const deleteTimeSlot = async (req, res) => {
+  try {
+    const { roomId, slotId } = req.params;
+
+    const classroom = await Classroom.findById(roomId);
+    if (!classroom) {
+      return res.status(404).json({ message: "Classroom not found" });
+    }
+
+    classroom.timeSlots = classroom.timeSlots.filter(
+      (slot) => slot._id.toString() !== slotId
+    );
+    await classroom.save();
+
+    res.json({
+      status: "success",
+      data: { classroom },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error deleting time slot" });
+  }
+};
+
+
+
+
 module.exports = {
-    createClassroom, getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor
+    getCourses,updateTimeSlot,deleteTimeSlot,addTimeSlot,createClassroom,getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor
 }

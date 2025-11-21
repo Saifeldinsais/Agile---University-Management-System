@@ -91,26 +91,26 @@ const viewCourses = async(req,res) => {
 const enrollCourse = async(req,res) => {
     try{
 
-        const {studentID, courseID} = req.body;
+        const {studentId, courseId} = req.body;
         
-        const student = await Student.findById(studentID);
+        const student = await Student.findById(studentId);
         if (!student) {
             return res.status(404).json({ message: "Student not found" });
         } 
 
-        const course = await Course.findOne(courseID);
+        const course = await Course.findById(courseId);
         if(!course){
             return res.status(404).json({ message: "Course not found" });   
         }
 
-        const exists = await Enrollment.findOne({ student: studentID, course: courseID });
+        const exists = await Enrollment.findOne({ student: studentId, course: courseId });
         if(exists){
             return res.status(400).json({ message: "Student already enrolled in this course" });
         }
 
         const enrollment = await Enrollment.create({
-            student: studentID,
-            course: courseID,
+            student: studentId,
+            course: courseId,
             status: "pending",
         });
 
@@ -131,7 +131,7 @@ const viewEnrolled = async(req,res) => {
     try {
     const { studentId } = req.params; 
 
-    const student = await Student.findById(studentID);
+    const student = await Student.findById(studentId);
     if (!student) {
         return res.status(404).json({ message: "Student not found" });
     } 
@@ -162,12 +162,16 @@ const viewEnrolled = async(req,res) => {
 
 const dropCourse = async(req,res) => {
     try {
-        const { studentID , courseID } = req.body;
+        const { studentId , courseId } = req.body;
 
-        const enrollment = await Enrollment.findOne({studentID , courseID});
+        const enrollment = await Enrollment.findOne({student: studentId , course: courseId});
 
         if (!enrollment) {
             return res.status(404).json({ message: "Enrollment not found" });
+        }
+
+        if (enrollment.status === "drop") {
+            return res.status(400).json({ message: "Already requested to drop" });
         }
 
         enrollment.status = "drop";

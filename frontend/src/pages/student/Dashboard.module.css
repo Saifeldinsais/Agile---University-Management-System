@@ -1,0 +1,12 @@
+.coursesContainer {
+    display: flex;
+    flex-wrap: wrap;         
+    gap: 20px;
+    align-items: stretch;    
+}
+.enrolledCourses {
+    display: flex;
+    flex-wrap: wrap;         
+    gap: 20px;
+    align-items: stretch; 
+}
