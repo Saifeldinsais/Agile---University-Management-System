@@ -1,32 +1,29 @@
 import { NavLink } from "react-router-dom";
 
-function Navbar() {
+function NavBarLogged() {
   const linkClass = ({ isActive }) =>
     isActive ? "nav-link nav-link-active" : "nav-link";
 
   return (
     <header className="navbar">
-      <NavLink to="/" className="navbar-logo">
+      <NavLink to="/student/" className="navbar-logo">
         UMS
       </NavLink>
       <nav className="navbar-links">
-        <NavLink to="/" className={linkClass}>
+        <NavLink to="/student/" end className={linkClass}>
           Home
         </NavLink>
-        <NavLink to="/facilities" className={linkClass}>
+        <NavLink to="/student/facilities" className={linkClass}>
           Facilities
         </NavLink>
-        <NavLink to="/dashboard" className={linkClass}>
+        <NavLink to="/student/dashboard" className={linkClass}>
           Dashboard
         </NavLink>
       </nav>
       <div className="navbar-actions">
-        <NavLink to="/signup" className={linkClass}>
-          Sign Up
-        </NavLink>
-
-        <NavLink to="/login" className={linkClass}>
-          Login
+        
+        <NavLink to="/" className={linkClass}>
+            Log Out
         </NavLink>
 
       </div>
@@ -34,4 +31,4 @@ function Navbar() {
   );
 }
 
-export default Navbar;
+export default NavBarLogged;

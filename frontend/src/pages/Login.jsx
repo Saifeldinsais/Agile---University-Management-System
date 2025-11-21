@@ -16,20 +16,25 @@ function Login() {
       const data = await loginUser({ email, password });
       // data = { status, data: { user }, token }
 
+      localStorage.setItem("studentId" , data.data.user._id);
+      localStorage.setItem("student" , JSON.stringify(data.data.user));
+      
       setStatus("Login successful!");
-
-      // save token (optional but useful)
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
+      
       localStorage.setItem("email", data.data.user.email);
 
       const isAdmin = data.data.user.email.toLowerCase().includes("@admin");
+      const studentCheck = data.data.user.email.toLowerCase().includes("@ums-student");
+
 
       if (isAdmin) {
-        // ✅ ADMIN REDIRECT HERE
+        
         navigate("/admin/dashboard");
-      } else {
+      } 
+      else if(studentCheck){
+        navigate("/student/");
+      }
+      else {
         navigate("/");
       }
     } catch (err) {
