@@ -23,19 +23,20 @@ router.route('/classrooms/:id')
   router.route('/classrooms/:id/status')
 .get(adminController.getClassroomStatus)
 
-//==================== courses
+//==================== courses =====================  
 
 
-router.route("/courses")
-.post(adminController.createCourse)
+router
+  .route("/courses")
+  .post(adminController.createCourse)
+  .get(adminController.getCourses);
 
-router.route("/courses/:id")
-.delete(adminController.deleteCourse)
-.patch(adminController.updateCourse)
+router
+  .route("/courses/:id")
+  .delete(adminController.deleteCourse)
+  .patch(adminController.updateCourse);
 
-
-
-//==================== assigning functions
+//==================== assigning functions ====================
 
 router.route('/classroom/:id/assign')
 .post(adminController.assignClassroom)

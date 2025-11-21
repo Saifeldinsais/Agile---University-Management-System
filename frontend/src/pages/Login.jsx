@@ -26,6 +26,16 @@ function Login() {
       const isAdmin = data.data.user.email.toLowerCase().includes("@admin");
       const studentCheck = data.data.user.email.toLowerCase().includes("@ums-student");
 
+      // If the logged-in user is a student, save the full user object
+      // so student pages can access profile info locally.
+      if (studentCheck && data.data.user) {
+        try {
+          localStorage.setItem("student", JSON.stringify(data.data.user));
+        } catch (e) {
+          console.error('Failed to persist student in localStorage', e);
+        }
+      }
+
       if (isAdmin) {
         // ✅ ADMIN REDIRECT HERE
         navigate("/admin/dashboard");

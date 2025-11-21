@@ -235,7 +235,10 @@ function AdminFacilities() {
           >
             Facilities
           </button>
-          <button className="menu-item">Curriculum</button>
+          <button className="menu-item" onClick={() => navigate("/admin/curriculum")}>
+            Curriculum
+          </button>
+
           <button className="menu-item">Staff</button>
           <button className="menu-item">Community</button>
         </nav>

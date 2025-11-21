@@ -224,6 +224,23 @@ const updateCourse = async (req, res) => {
     }
 }
 
+const getCourses = async (req, res) => {
+  try {
+    const courses = await Course.find();
+
+    return res.status(200).json({
+      status: "success",
+      data: courses,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: error.message || "An error occurred",
+    });
+  }
+};
+
+
 //==================== assgining functions
 
 const assignClassroom = async (req, res) => {
@@ -503,5 +520,5 @@ const deleteTimeSlot = async (req, res) => {
 
 
 module.exports = {
-    updateTimeSlot,deleteTimeSlot,addTimeSlot,createClassroom,getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor
+    getCourses,updateTimeSlot,deleteTimeSlot,addTimeSlot,createClassroom,getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor
 }

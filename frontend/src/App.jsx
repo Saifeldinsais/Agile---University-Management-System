@@ -18,6 +18,8 @@ import AdminFacilities from "./pages/admin/AdminFacilities";
 import StudentDashboard from "./pages/student/Dashboard"
 import StudentHome from "./pages/student/Home"
 
+import AdminCurriculum from "./pages/admin/AdminCurriculum";
+
 
 function App() {
   return (
@@ -34,6 +36,12 @@ function App() {
       {/* ADMIN PAGES (no navbar, full admin layout) */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/facilities" element={<AdminFacilities />} />
+
+      {/* ADMIN PAGES (no navbar, full admin layout) */}
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/facilities" element={<AdminFacilities />} />
+      <Route path="/admin/curriculum" element={<AdminCurriculum />} />
+
 
       {/* Student PAGES */}
       <Route path="student" element={<StudentLayout/>} >

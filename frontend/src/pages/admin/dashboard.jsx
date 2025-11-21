@@ -87,9 +87,10 @@ function Dashboard() {
           >
             Facilities
           </button>
-          <button className="menu-item" onClick={() => alert("Curriculum soon")}>
+          <button className="menu-item" onClick={() => go("/admin/curriculum")}>
             Curriculum
           </button>
+
           <button className="menu-item" onClick={() => alert("Staff soon")}>
             Staff
           </button>

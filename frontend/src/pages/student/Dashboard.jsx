@@ -5,20 +5,25 @@ import WelcomeBox from "./WelcomeBox/WelcomeBox";
 function Dashboard() {
 
     const [student , setStudent] = useState(null)
-  
-     useEffect(() => {
-    const storedStudent = localStorage.getItem("student");
-    if (storedStudent) {return}
-        queueMicrotask(() => {
-        setStudent(JSON.parse(storedStudent));
-    });
-  }, []);
+
+    useEffect(() => {
+      const storedStudent = localStorage.getItem("student");
+      if (!storedStudent) return;
+      try {
+        const parsed = JSON.parse(storedStudent);
+        setStudent(parsed);
+      } catch (err) {
+        // If parsing fails, clear the stored value and keep student null
+        console.error('Failed to parse stored student:', err);
+        localStorage.removeItem('student');
+      }
+    }, []);
 
   return (
     <>
-        <WelcomeBox name={student.username || "Student"}
-                    grade={student.GPA || "error"}
-                    level={student.level || "error"}/>
+        <WelcomeBox name={student?.username ?? "Student"}
+              grade={student?.GPA ?? "error"}
+              level={student?.level ?? "error"}/>
     </>
   );
 }
