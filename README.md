@@ -177,7 +177,7 @@ This section summarizes all backend and frontend features that are fully impleme
 
 - Email validation + duplicate email prevention
 
-- Rejects any student email containing "@admin" for security
+- Only accept Students with domain name "ums-student".
 
 ## 🧑‍💼 Admin Features
 
@@ -302,7 +302,7 @@ Returns:
 
 ✔ Navigation Based on User Role
 
-- Students → navigate to /
+- Students → navigate to /student/
 
 - Admins → navigate to /admin/dashboard
 
