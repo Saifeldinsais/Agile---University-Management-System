@@ -25,4 +25,6 @@ const enrollmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Enrollment", enrollmentSchema);
+
+const Enrollment =  mongoose.model("Enrollment", enrollmentSchema);
+module.exports = Enrollment;

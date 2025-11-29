@@ -4,6 +4,8 @@ const Course = require("../Models/course.model");
 const Doctor = require("../Models/doctor.model");
 const JWT = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const Enrollment = require("../Models/enrollment.model")
+const Student = require("../Models/student.model");
 
 // const signUp = async(req,res)=>{     // to create an admin only then delete it  the admins don't sign up in website
 //     try{   
@@ -241,7 +243,7 @@ const getCourses = async (req, res) => {
 };
 
 
-//==================== assgining functions
+//==================== assgining functions ==============================
 
 const assignClassroom = async (req, res) => {
     try {
@@ -515,10 +517,82 @@ const deleteTimeSlot = async (req, res) => {
     res.status(500).json({ message: "Error deleting time slot" });
   }
 };
+// View enrolled courses and accept/decline enrollment requests
+
+const acceptEnrollments = async (req, res) => {
+    try{
+        const { student } = req.params;
+        const enrollments = await Enrollment.find({ student: student, status: "pending" });
+        
+        if(!enrollments || enrollments.length === 0){
+            return res.status(404).json({ message: "No pending enrollments found for this student" });
+        }
+        
+
+        await Enrollment.updateMany(
+            { student: student, status: "pending" },
+            { status: "accepted" }
+        );
+        const addtoliststudent = await Student.findById(req.params.student);
+        addtoliststudent.courses.push(...enrollments.map(enrollment => enrollment.course));
+        await addtoliststudent.save();
+          
+        
+        const updated = await Enrollment.find({ student: student, status: "accepted" });
+        
+        res.status(200).json({
+            status: "success",
+            data: { enrollments: updated },
+        });
+    } catch(error){
+        res.status(500).json({ message: "Error managing enrollments", error: error.message });
+    }
+}
+
+const rejectEnrollments = async (req, res) => {
+    try{
+        const { student } = req.params;
+        const enrollments = await Enrollment.find({ student: student, status: "pending" });
+        
+        if(!enrollments || enrollments.length === 0){
+            return res.status(404).json({ message: "No pending enrollments found for this student" });
+        }
+        
+        // Update all pending enrollments to failed
+        await Enrollment.updateMany(
+            { student: student, status: "pending" },
+            { status: "failed" }
+        );
+        
+        const updated = await Enrollment.find({ student: student, status: "failed" });
+        
+        res.status(200).json({
+            status: "success",
+            data: { enrollments: updated },
+        });
+    } catch(error){
+        res.status(500).json({ message: "Error managing enrollments", error: error.message });
+    }
+};
+//=======================================================================================
 
 
+// Retrieving all students records
 
+const getStudents = async (req, res) => {
+    try {
+        const students = await Student.find();
+        res.status(200).json({
+            status: "success",
+            results: students.length,
+            data: students
+        });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Failed to retrieve students", error: error.message });
+    }   
+};
 
 module.exports = {
-    getCourses,updateTimeSlot,deleteTimeSlot,addTimeSlot,createClassroom,getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor
+    getCourses,updateTimeSlot,deleteTimeSlot,addTimeSlot,createClassroom,getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor , acceptEnrollments , rejectEnrollments , getStudents
 }

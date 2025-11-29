@@ -188,7 +188,9 @@ const dropCourse = async(req,res) => {
             error,
         });
     }
-}
+};
+
+
 
 
 

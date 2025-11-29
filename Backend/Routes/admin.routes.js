@@ -47,6 +47,14 @@ router.route('/courses/:id/doctor')
 .delete(adminController.unassignCourseFromDoctor)
 
 
+//==================== enrollment requests ====================
+router.patch('/enrollments/:student/accept', adminController.acceptEnrollments);
+router.patch('/enrollments/:student/reject', adminController.rejectEnrollments);
+
+//==================== get students ====================
+router.get('/students', adminController.getStudents);
+
+
 
 
 
