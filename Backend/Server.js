@@ -1,18 +1,30 @@
-const connectDB = require("./Db_config/DB");
+require("dotenv").config();
+
 const express = require("express");
-const studentRouter = require("./Routes/student.routes");
 const cors = require("cors");
+const connectDB = require("./Db_config/DB");
+const studentRouter = require("./Routes/student.routes");
+const adminRouter = require("./Routes/admin.routes");
+const authRouter = require("./Routes/user.routes");
+const doctorRouter = require("./Routes/doctor.routes")
 const app = express();
+
+
 app.use(cors({origin: "*"}));
 app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.urlencoded({ extended: true }));
-require("dotenv").config();
-const Port = 5000;
+
 connectDB(); 
 
-app.use("/UMS",studentRouter)
+app.use("/api/auth", authRouter);
+app.use("/api/student", studentRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/doctor",doctorRouter)
 
 
+const Port = 5000;
 app.listen(5000, () => {
   console.log(`UMS Server is Listening on port 5000`);
 });

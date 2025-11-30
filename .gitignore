@@ -1,0 +1,12 @@
+# Frontend
+/frontend/node_modules
+/frontend/dist
+/frontend/.env
+
+# Backend (if using Node there too)
+Backend/node_modules
+Backend/.env
+
+# General
+.DS_Store
+.env

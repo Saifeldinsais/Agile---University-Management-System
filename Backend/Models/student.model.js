@@ -8,7 +8,7 @@ username  : {
     required: [true, "Username is required"],
     unique: true,
     trim: true,
-   maxlength : [40, "Username must be at most 40 characters long"]
+    maxlength : [40, "Username must be at most 40 characters long"]
 },
 email: {
     type: String,
@@ -27,7 +27,7 @@ createdAt : {
     type: Date,
     default: Date.now
 },
-advisor : {type : mongoose.Schema.Types.ObjectId, ref : "Staff"},
+advisor : {type : mongoose.Schema.Types.ObjectId, ref : "Doctor"},
 courses :[{type: mongoose.Schema.Types.ObjectId, ref: "Course"}],
 level :{Type : String},
 department: {String},
@@ -41,6 +41,6 @@ studentSchema.pre("save", async function(next) {
 });
 
 
-const Student = mongoose.model("Students",studentSchema);
+const Student = mongoose.model("Student",studentSchema);
 
 module.exports = Student;
