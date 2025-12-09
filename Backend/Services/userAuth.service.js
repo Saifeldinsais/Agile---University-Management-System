@@ -105,6 +105,10 @@ const userAuthService = {
             if (!isMatch) {
                 throw new Error("Invalid email or password");
             }
+            const usernameAttr = await attribute.getAttributeByName("username");
+            const usernameObj = await value.getValue(user.entity_id, usernameAttr.attribute_id);
+
+
 
             // Create token
             const token = JWT.sign(
@@ -113,9 +117,18 @@ const userAuthService = {
                 { expiresIn: "7d" }
             );
 
-            return { success: true, token, userId: user.entity_id, email };
+            return { 
+                success: true, 
+                token, 
+                user: {
+                    id: user.entity_id,
+                    email: email,
+                    username: usernameObj?.value_string,
+                    userType: user.entity_type
+                }
+            };
         } catch (error) {
-            return { success: false, message: error.message };
+            return { success: false, message: error.message , user: null };
         }
     }
 };

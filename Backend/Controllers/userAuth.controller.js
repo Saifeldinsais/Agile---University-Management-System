@@ -82,8 +82,7 @@ const signIn = async (req, res) => {
             return res.status(200).json({
                 status: "Success",
                 token: result.token,
-                user: result,
-                role: type
+                user : result.user
             });
         }
         return res.status(401).json({ status: "Fail", message: result.message });
