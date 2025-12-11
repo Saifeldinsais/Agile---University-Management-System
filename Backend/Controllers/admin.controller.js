@@ -1,5 +1,4 @@
 const Classroom = require("../Models/classroom.model");
-const Admin = require("../Models/admin.model");
 const Course = require("../Models/course.model");
 const Doctor = require("../Models/doctor.model");
 const JWT = require("jsonwebtoken");
@@ -7,90 +6,20 @@ const bcrypt = require("bcryptjs");
 const Enrollment = require("../Models/enrollment.model")
 const Student = require("../Models/student.model");
 
-// const signUp = async(req,res)=>{     // to create an admin only then delete it  the admins don't sign up in website
-//     try{   
-//         let {username,email,password,confirmpassword} = req.body;
-//         if(!username || !email || !password || !confirmpassword){
-//             return res.status(400).json({message : "All fields are required"});
-//         }
-//         if(password !== confirmpassword){
-//             return res.status(400).json({message : "Passwords do not match"});
-//         }   
-//         let existingadmin = await Admin.findOne({email:email});
-//         if(existingadmin){
-//             return res.status(400).json({message : "Admin with this email already exists"});
-//         }
-//         const newAdmin = await Admin.create({
-//             username,
-//             email,
-//             password,            
-//         })
-//         const token = JWT.sign(
-//             { password: newAdmin.password, username: newAdmin.username }, 
-//             process.env.JWT_SECRET, 
-//             { expiresIn: process.env.JWT_EXPIRATION });
+const adminService = require("../Services/admin.service");
 
-//         res.status(201).json({
-//             status: "Success",
-//             data: { user: newAdmin  },
-//             token: token,
-//         });
-//     }catch(error){
-//         res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
-
-//     }
-// }
-
-// const signIn = async(req,res) => {
-//     try{
-//         const {email , password} = req.body;
-//         if(!email || !password){
-//             return res.status(400).json({message: "Email And Password Required"});
-//         }
-//         const admin = await Admin.findOne({email:email});
-//         if(!admin){
-//             return res.status(401).json({message: "Invalid email or password"});
-//         }
-//         const isMatch = await bcrypt.compare(password , admin.password)
-//         if(!isMatch){
-//             return res.status(402).json({message: "Invalid email or password"});
-//         }
-
-//         const token = JWT.sign(
-//             { id: admin._id, username: admin.username },
-//             process.env.JWT_SECRET,
-//             { expiresIn: process.env.JWT_EXPIRATION }
-//         );
-
-//         res.status(200).json({
-//             status: "Success",
-//             data: { user: admin},
-//             token: token,
-//         });
-
-//     }catch(error){
-//         res.status(400).json({ status: "Fail" , message: error.message || "An error occurred"});
-//     }
-
-// }
-
-const createClassroom = async (req, res) => {
+const createClassroom = async (req, res) => { 
     try {
         const { roomName, capacity, type, bookedSchedule } = req.body;
         if (!roomName || !capacity || !type) {
             return res.status(400).json({ message: "Required fields are missing" });
         }
-        const existingClassroom = await Classroom.findOne({ roomName: roomName });
-        if (existingClassroom) {
-            return res.status(400).json({ message: "Classroom with this name already exists" });
-        }
-        const classroom = await Classroom.create({
+        const classroom = await adminService.createClassroom({
             roomName,
-            capacity,
+            capacity,   
             type,
-            bookedSchedule,
+            bookedSchedule
         });
-
         res.status(200).json({
             status: "success", data: { classroom: classroom }
         });

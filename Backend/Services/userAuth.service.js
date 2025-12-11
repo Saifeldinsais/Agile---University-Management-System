@@ -130,6 +130,17 @@ const userAuthService = {
         } catch (error) {
             return { success: false, message: error.message , user: null };
         }
+    },
+
+    // Check if user exists by email
+    checkUserExists: async (email) => {
+        try {
+            await initializeAttributes();
+            const user = await entity.findByAttribute("email", email);
+            return !!user;
+        } catch (error) {
+            throw new Error("Error checking user existence: " + error.message);
+        }
     }
 };
 
