@@ -39,6 +39,13 @@ const Entity = {
       [attributeName, attributeValue]
     );
     return rows[0] || null;
+  },
+  getallStudents: async ()=>{
+    const [rows] = await pool.query(
+      `SELECT * FROM entities WHERE entity_type = 'student'`
+    );
+    return rows;
+
   }
 };
 

@@ -580,7 +580,7 @@ const rejectEnrollments = async (req, res) => {
 
 const getStudents = async (req, res) => {
     try {
-        const students = await Student.find();
+        const students = await adminService.getallStudents();
         res.status(200).json({
             status: "success",
             results: students.length,

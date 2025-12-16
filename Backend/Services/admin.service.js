@@ -188,6 +188,14 @@ deleteClassroom: async (id) => {
         return { success: false, message: "Error deleting classroom: " + error.message };
     }
 
+},
+getallStudents: async ()=>{
+    try{
+        const students = await entity.getallStudents();
+        return {success : true , students};
+    }catch(error){
+        return {success : false , message : "Error getting students: "+ error.message};
+    }
 }
 
 };
