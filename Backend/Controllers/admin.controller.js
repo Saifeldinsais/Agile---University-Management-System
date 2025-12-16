@@ -7,10 +7,9 @@ const Enrollment = require("../Models/enrollment.model")
 const Student = require("../Models/student.model");
 
 const adminService = require("../Services/admin.service");
-
 const createClassroom = async (req, res) => {
   try {
-    const { roomName, capacity, type, isworking } = req.body;
+    const { roomName, capacity, type, isworking, timeslots } = req.body;
 
     // Validate required fields
     if (!roomName || capacity == null || !type || isworking == null) {
@@ -20,7 +19,15 @@ const createClassroom = async (req, res) => {
       });
     }
 
-    // Check for existing classroom with same roomName
+    // Optional: check timeslots is an array if provided
+    if (timeslots && !Array.isArray(timeslots)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "timeslots must be an array of strings",
+      });
+    }
+
+    // Check for existing classroom
     const existingClassroom = await adminService.getClassroomByName(roomName);
     if (existingClassroom) {
       return res.status(400).json({
@@ -29,12 +36,13 @@ const createClassroom = async (req, res) => {
       });
     }
 
-    // Create the classroom
+    // Create classroom (pass timeslots array directly)
     const result = await adminService.createClassroom({
       roomName,
       capacity,
       type,
       isworking,
+      timeslots, // can be undefined or array
     });
 
     if (!result.success) {
@@ -53,6 +61,7 @@ const createClassroom = async (req, res) => {
           capacity,
           type,
           isworking,
+          timeslots: timeslots || [],
         },
       },
     });
@@ -64,6 +73,7 @@ const createClassroom = async (req, res) => {
     });
   }
 };
+
 
 const getClassrooms = async (req, res) => {
   try {
@@ -114,8 +124,6 @@ const updateClassroom = async (req, res) => {
     res.status(200).json({
       status: "success",
       message: "Classroom updated successfully",
-      // Optionally return updated data by refetching if needed
-      // Or just confirm success
     });
   } catch (error) {
     res.status(500).json({
