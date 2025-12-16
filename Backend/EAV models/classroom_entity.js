@@ -25,6 +25,14 @@ const ClassroomEntity = {
     );
     return rows;
   },
+  deleteClassroom: async (id) => {
+    const [result] = await pool.query(
+      "DELETE FROM classroom_entity WHERE entity_id = ?",
+      [id]
+    );
+    return result.affectedRows > 0;
+  },
+  
 
   updateClassroom: async (id, classroom_name) => {  
     const [result] = await pool.query(
@@ -34,12 +42,22 @@ const ClassroomEntity = {
     return result.affectedRows > 0;
   },
 
-  deleteClassroom: async (id) => {
-    const [result] = await pool.query(
-      "DELETE FROM classroom_entity WHERE entity_id = ?",
-      [id]
+  findByAttribute: async (attributeName, attributeValue) => {
+    const [rows] = await pool.query(
+      `SELECT ce.* FROM classroom_entity ce
+       JOIN classroom_entity_attribute cea ON ce.entity_id = cea.entity_id
+       JOIN attributes a ON cea.attribute_id = a.attribute_id
+       WHERE a.attribute_name = ? AND cea.value_string = ?
+       LIMIT 1`,
+      [attributeName, attributeValue]
     );
-    return result.affectedRows > 0;
-  }
+    return rows[0] || null;
+  },
+  getAllClassrooms: async () => {
+    const [rows] = await pool.query(
+      "SELECT * FROM classroom_entity"
+    );
+    return rows;
+  },
 };
 module.exports = ClassroomEntity;

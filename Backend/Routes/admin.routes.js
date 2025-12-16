@@ -11,14 +11,13 @@ router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTim
 
 
 router.route('/classrooms')
-  .post(adminController.createClassroom)
-  .get(adminController.getClassrooms);
+  .post(adminController.createClassroom)  // DONE EAV MODEL
+  .get(adminController.getClassrooms);  // DONE EAV MODEL
  
 
 router.route('/classrooms/:id')
-  .patch(adminController.updateClassroom)
-  .delete(adminController.deleteClassroom);
-
+  .patch(adminController.updateClassroom) // DONE EAV MODEL
+  .delete(adminController.deleteClassroom); // DONE EAV MODEL
 
   router.route('/classrooms/:id/status')
 .get(adminController.getClassroomStatus)

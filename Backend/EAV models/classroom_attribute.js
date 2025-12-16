@@ -1,8 +1,4 @@
 const pool  = require('../Db_config/DB');
-const { getAttributeByName } = require('./Attribute');
-const { create } = require('./Entity');
-
-
 const ClassroomAttribute = {
 
 
@@ -15,19 +11,16 @@ const ClassroomAttribute = {
   },
 
   createClassroomAttribute: async (attribute_name, data_type) => {  
-    const [existing] = await pool.query(
-      "SELECT * FROM classroom_attributes WHERE attribute_name = ?",  
-      [attribute_name]
-    );
-    if (existing.length > 0) {
-      throw new Error("Attribute already exists");
-    } 
+    const existing = await ClassroomAttribute.getAttributeByName(attribute_name);
+    if (existing) {
+        return existing.attribute_id;  
+    }
     const [result] = await pool.query(
       "INSERT INTO classroom_attributes (attribute_name, data_type) VALUES (?, ?)",  
       [attribute_name, data_type]
     );
     return result.insertId;
-  },
+},
 
     getClassroomAttributeById: async (id) => {  
     const [rows] = await pool.query(

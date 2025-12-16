@@ -8,67 +8,137 @@ const Student = require("../Models/student.model");
 
 const adminService = require("../Services/admin.service");
 
-const createClassroom = async (req, res) => { 
-    try {
-        const { roomName, capacity, type, bookedSchedule } = req.body;
-        if (!roomName || !capacity || !type) {
-            return res.status(400).json({ message: "Required fields are missing" });
-        }
-        const classroom = await adminService.createClassroom({
-            roomName,
-            capacity,   
-            type,
-            bookedSchedule
-        });
-        res.status(200).json({
-            status: "success", data: { classroom: classroom }
-        });
+const createClassroom = async (req, res) => {
+  try {
+    const { roomName, capacity, type, isworking } = req.body;
+
+    // Validate required fields
+    if (!roomName || capacity == null || !type || isworking == null) {
+      return res.status(400).json({
+        status: "fail",
+        message: "roomName, capacity, type, and isworking are required",
+      });
     }
-    catch (error) {
-        res.status(500).json({ message: "Failed to create the classroom", error: error.message });
+
+    // Check for existing classroom with same roomName
+    const existingClassroom = await adminService.getClassroomByName(roomName);
+    if (existingClassroom) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Classroom with this roomName already exists",
+      });
     }
-}
+
+    // Create the classroom
+    const result = await adminService.createClassroom({
+      roomName,
+      capacity,
+      type,
+      isworking,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        status: "fail",
+        message: result.message,
+      });
+    }
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        classroom: {
+          id: result.id,
+          roomName,
+          capacity,
+          type,
+          isworking,
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to create classroom",
+      error: error.message,
+    });
+  }
+};
 
 const getClassrooms = async (req, res) => {
-    try {
-        const classrooms = await Classroom.find();
+  try {
+    const result = await adminService.getClassroom();
 
-        res.status(200).json({
-            status: "success", results: classrooms.length, data: classrooms
-        });
+    if (!result.success) {
+      return res.status(500).json({
+        status: "error",
+        message: result.message,
+      });
     }
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
+
+    res.status(200).json({
+      status: "success",
+      results: result.classrooms.length,
+      data: { classrooms: result.classrooms },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to fetch classrooms",
+      error: error.message,
+    });
+  }
+};
 
 const updateClassroom = async (req, res) => {
-    try {
-        const classroom = await Classroom.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
 
-        if (!classroom) {
-            return res.status(404).json({ status: "fail", message: "classroom not found" })
-        }
+    // At minimum, expect some fields to update — but allow partial updates
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        status: "fail",
+        message: "No update data provided",
+      });
+    }
+    const result = await adminService.updateClassroom(parseInt(id), updateData);
 
-        res.status(200).json({ status: "success", data: classroom })
+    if (!result.success) {
+      return res.status(400).json({
+        status: "fail",
+        message: result.message,
+      });
     }
-    catch (error) {
-        res.status(500).json({ status: "error", message: error.message })
-    }
-}
+
+    res.status(200).json({
+      status: "success",
+      message: "Classroom updated successfully",
+      // Optionally return updated data by refetching if needed
+      // Or just confirm success
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to update classroom",
+      error: error.message,
+    });
+  }
+};
 
 const deleteClassroom = async (req, res) => {
     try {
+        const classroom = await adminService.getClassroomById(req.params.id)
 
-        const deleted = await Classroom.findByIdAndDelete(req.params.id);
-
-        if (!deleted) {
-            return res.status(404).json({ status: "fail", message: "Classroom not found" });
+        if (!classroom) {
+            return res.status(404).json({ status: "fail", message: "Classroom not found" })
         }
+        const result = await adminService.deleteClassroom(req.params.id)
 
-        const classrooms = await Classroom.find();
-
-        res.status(200).json({ status: "success", data: classrooms })
+        if (!result.success) {
+            return res.status(400).json({ status: "fail", message: result.message })
+        }
+        res.status(200).json({ status: "success", message: "Classroom deleted successfully" })      
     }
     catch (error) {
         res.status(500).json({ status: "error", message: error.message })
