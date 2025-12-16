@@ -1,5 +1,4 @@
 const Classroom = require("../Models/classroom.model");
-const Admin = require("../Models/admin.model");
 const Course = require("../Models/course.model");
 const Doctor = require("../Models/doctor.model");
 const JWT = require("jsonwebtoken");
@@ -7,139 +6,139 @@ const bcrypt = require("bcryptjs");
 const Enrollment = require("../Models/enrollment.model")
 const Student = require("../Models/student.model");
 
-// const signUp = async(req,res)=>{     // to create an admin only then delete it  the admins don't sign up in website
-//     try{   
-//         let {username,email,password,confirmpassword} = req.body;
-//         if(!username || !email || !password || !confirmpassword){
-//             return res.status(400).json({message : "All fields are required"});
-//         }
-//         if(password !== confirmpassword){
-//             return res.status(400).json({message : "Passwords do not match"});
-//         }   
-//         let existingadmin = await Admin.findOne({email:email});
-//         if(existingadmin){
-//             return res.status(400).json({message : "Admin with this email already exists"});
-//         }
-//         const newAdmin = await Admin.create({
-//             username,
-//             email,
-//             password,            
-//         })
-//         const token = JWT.sign(
-//             { password: newAdmin.password, username: newAdmin.username }, 
-//             process.env.JWT_SECRET, 
-//             { expiresIn: process.env.JWT_EXPIRATION });
-
-//         res.status(201).json({
-//             status: "Success",
-//             data: { user: newAdmin  },
-//             token: token,
-//         });
-//     }catch(error){
-//         res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
-
-//     }
-// }
-
-// const signIn = async(req,res) => {
-//     try{
-//         const {email , password} = req.body;
-//         if(!email || !password){
-//             return res.status(400).json({message: "Email And Password Required"});
-//         }
-//         const admin = await Admin.findOne({email:email});
-//         if(!admin){
-//             return res.status(401).json({message: "Invalid email or password"});
-//         }
-//         const isMatch = await bcrypt.compare(password , admin.password)
-//         if(!isMatch){
-//             return res.status(402).json({message: "Invalid email or password"});
-//         }
-
-//         const token = JWT.sign(
-//             { id: admin._id, username: admin.username },
-//             process.env.JWT_SECRET,
-//             { expiresIn: process.env.JWT_EXPIRATION }
-//         );
-
-//         res.status(200).json({
-//             status: "Success",
-//             data: { user: admin},
-//             token: token,
-//         });
-
-//     }catch(error){
-//         res.status(400).json({ status: "Fail" , message: error.message || "An error occurred"});
-//     }
-
-// }
+const adminService = require("../Services/admin.service");
 
 const createClassroom = async (req, res) => {
-    try {
-        const { roomName, capacity, type, bookedSchedule } = req.body;
-        if (!roomName || !capacity || !type) {
-            return res.status(400).json({ message: "Required fields are missing" });
-        }
-        const existingClassroom = await Classroom.findOne({ roomName: roomName });
-        if (existingClassroom) {
-            return res.status(400).json({ message: "Classroom with this name already exists" });
-        }
-        const classroom = await Classroom.create({
-            roomName,
-            capacity,
-            type,
-            bookedSchedule,
-        });
+  try {
+    const { roomName, capacity, type, isworking } = req.body;
 
-        res.status(200).json({
-            status: "success", data: { classroom: classroom }
-        });
+    // Validate required fields
+    if (!roomName || capacity == null || !type || isworking == null) {
+      return res.status(400).json({
+        status: "fail",
+        message: "roomName, capacity, type, and isworking are required",
+      });
     }
-    catch (error) {
-        res.status(500).json({ message: "Failed to create the classroom", error: error.message });
+
+    // Check for existing classroom with same roomName
+    const existingClassroom = await adminService.getClassroomByName(roomName);
+    if (existingClassroom) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Classroom with this roomName already exists",
+      });
     }
-}
+
+    // Create the classroom
+    const result = await adminService.createClassroom({
+      roomName,
+      capacity,
+      type,
+      isworking,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        status: "fail",
+        message: result.message,
+      });
+    }
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        classroom: {
+          id: result.id,
+          roomName,
+          capacity,
+          type,
+          isworking,
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to create classroom",
+      error: error.message,
+    });
+  }
+};
 
 const getClassrooms = async (req, res) => {
-    try {
-        const classrooms = await Classroom.find();
+  try {
+    const result = await adminService.getClassroom();
 
-        res.status(200).json({
-            status: "success", results: classrooms.length, data: classrooms
-        });
+    if (!result.success) {
+      return res.status(500).json({
+        status: "error",
+        message: result.message,
+      });
     }
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
+
+    res.status(200).json({
+      status: "success",
+      results: result.classrooms.length,
+      data: { classrooms: result.classrooms },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to fetch classrooms",
+      error: error.message,
+    });
+  }
+};
 
 const updateClassroom = async (req, res) => {
-    try {
-        const classroom = await Classroom.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
 
-        if (!classroom) {
-            return res.status(404).json({ status: "fail", message: "classroom not found" })
-        }
+    // At minimum, expect some fields to update — but allow partial updates
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        status: "fail",
+        message: "No update data provided",
+      });
+    }
+    const result = await adminService.updateClassroom(parseInt(id), updateData);
 
-        res.status(200).json({ status: "success", data: classroom })
+    if (!result.success) {
+      return res.status(400).json({
+        status: "fail",
+        message: result.message,
+      });
     }
-    catch (error) {
-        res.status(500).json({ status: "error", message: error.message })
-    }
-}
+
+    res.status(200).json({
+      status: "success",
+      message: "Classroom updated successfully",
+      // Optionally return updated data by refetching if needed
+      // Or just confirm success
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to update classroom",
+      error: error.message,
+    });
+  }
+};
 
 const deleteClassroom = async (req, res) => {
     try {
+        const classroom = await adminService.getClassroomById(req.params.id)
 
-        const deleted = await Classroom.findByIdAndDelete(req.params.id);
-
-        if (!deleted) {
-            return res.status(404).json({ status: "fail", message: "Classroom not found" });
+        if (!classroom) {
+            return res.status(404).json({ status: "fail", message: "Classroom not found" })
         }
+        const result = await adminService.deleteClassroom(req.params.id)
 
-        const classrooms = await Classroom.find();
-
-        res.status(200).json({ status: "success", data: classrooms })
+        if (!result.success) {
+            return res.status(400).json({ status: "fail", message: result.message })
+        }
+        res.status(200).json({ status: "success", message: "Classroom deleted successfully" })      
     }
     catch (error) {
         res.status(500).json({ status: "error", message: error.message })
