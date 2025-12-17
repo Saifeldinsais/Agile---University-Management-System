@@ -152,15 +152,11 @@ updateClassroom: async (id, classroomData) => {
 },
   getClassroomByName: async (roomName) => {
     try {
-        await initializeAttributes();
-        
-        const classroom = await ClassroomEntity.findByAttribute("roomName", roomName); 
-        if (!classroom) {
-            return null;
-        }
-        return classroom;
+        await initializeAttributes(); // Ensure attributes exist in the DB first
+        const classroom = await ClassroomEntity.findByAttribute("roomName", roomName);
+        return classroom || null;
     } catch (error) {
-        console.error("Error getting classroom by name:", error);
+        console.error("Error checking classroom existence:", error);
         return null;
     }
 },

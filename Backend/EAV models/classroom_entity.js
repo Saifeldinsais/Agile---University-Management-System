@@ -46,13 +46,13 @@ const ClassroomEntity = {
     const [rows] = await pool.query(
       `SELECT ce.* FROM classroom_entity ce
        JOIN classroom_entity_attribute cea ON ce.entity_id = cea.entity_id
-       JOIN attributes a ON cea.attribute_id = a.attribute_id
-       WHERE a.attribute_name = ? AND cea.value_string = ?
+       JOIN classroom_attributes ca ON cea.attribute_id = ca.attribute_id
+       WHERE ca.attribute_name = ? AND cea.value_string = ?
        LIMIT 1`,
       [attributeName, attributeValue]
     );
     return rows[0] || null;
-  },
+},
   getAllClassrooms: async () => {
     const [rows] = await pool.query(
       "SELECT * FROM classroom_entity"
