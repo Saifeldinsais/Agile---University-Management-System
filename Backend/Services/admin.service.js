@@ -40,6 +40,12 @@ const initializeAttributes = async () => {
             await ClassroomAttribute.createClassroomAttribute("timeslot","string");
             console.log("Created timeslot attribute");
         }   
+         const classroom_requests = await ClassroomAttribute.getAllClassroomAttributes("classroom_requests","string");
+        if(!classroom_requests){
+            await ClassroomAttribute.createClassroomAttribute("classroom_requests","string");
+            console.log("Created classroom_requests attribute");
+        }
+
         attributesInitialized = true;
         console.log("Classroom attributes initialized");
     } catch (error) {
