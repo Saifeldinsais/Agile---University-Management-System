@@ -9,6 +9,15 @@ const ClassroomValue = {
         );
         return rows.length > 0 ? rows[0] : null;
     },
+        getAllClassroomValues: async (entity_id, attribute_id) => {
+    const [rows] = await pool.query(
+        `SELECT * FROM classroom_entity_attribute
+        WHERE entity_id = ? AND attribute_id = ?
+        ORDER BY array_index ASC`,
+        [entity_id, attribute_id]
+    );
+    return rows; // always array
+    },
 
     createClassroomValue: async (entity_id, attribute_id, value_data) => {
         const { value_string, value_number, value_reference, array_index } = value_data;

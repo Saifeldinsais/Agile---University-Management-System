@@ -33,7 +33,7 @@ function WeeklyScheduleGrid({ classrooms, dayFilter, doctorFilter }) {
         </thead>
         <tbody>
           {classrooms.map((room) => (
-            <tr key={room._id}>
+            <tr key={room._id || room.id}>
               <td>{room.roomName}</td>
               {days.map((d) => {
                 const slotsForDay = (room.timeSlots || []).filter((slot) => {
@@ -93,7 +93,7 @@ function AdminFacilities() {
   const [searchRoom, setSearchRoom] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("add"); 
+  const [modalMode, setModalMode] = useState("add");
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [editingSlot, setEditingSlot] = useState(null);
 
@@ -102,11 +102,15 @@ function AdminFacilities() {
     setError("");
     try {
       const res = await apiClient.get("/admin/classrooms");
-      // your controller returns { status, results, data: [...] }
-      setClassrooms(res.data.data || []);
+      console.log("Classrooms response:", res.data);
+      // Backend returns: { status, results, data: { classrooms: [...] } }
+      const classroomsData = res.data.data?.classrooms || res.data?.classrooms || [];
+      console.log("Setting classrooms to:", classroomsData);
+      setClassrooms(Array.isArray(classroomsData) ? classroomsData : []);
     } catch (err) {
       console.error(err);
       setError("Failed to load classrooms");
+      setClassrooms([]); // Ensure it's always an array
     } finally {
       setLoading(false);
     }
@@ -147,8 +151,8 @@ function AdminFacilities() {
       console.error(err);
       setError(
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to create classroom."
+        err.message ||
+        "Failed to create classroom."
       );
     }
   }
@@ -163,8 +167,8 @@ function AdminFacilities() {
       console.error(err);
       setError(
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to delete classroom."
+        err.message ||
+        "Failed to delete classroom."
       );
     }
   }
@@ -180,8 +184,8 @@ function AdminFacilities() {
       console.error(err);
       setError(
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to delete time slot."
+        err.message ||
+        "Failed to delete time slot."
       );
     }
   }
@@ -213,7 +217,7 @@ function AdminFacilities() {
   const hallsCount = classrooms.filter((r) => r.type === "hall").length;
   const labsCount = classrooms.filter((r) => r.type === "lab").length;
   const totalCapacity = classrooms.reduce(
-    (sum, r) => sum + (r.capacity || 0),
+    (sum, r) => sum + (parseInt(r.capacity) || 0),
     0
   );
 
@@ -419,10 +423,10 @@ function AdminFacilities() {
                 </thead>
                 <tbody>
                   {filteredClassrooms.map((room) => (
-                    <tr key={room._id}>
+                    <tr key={room._id || room.id}>
                       <td>{room.roomName}</td>
                       <td>{room.type}</td>
-                      <td>{room.capacity}</td>
+                      <td>{parseInt(room.capacity)}</td>
                       <td>
                         {(room.timeSlots || []).length === 0 && (
                           <span style={{ fontSize: 12, color: "#6b7280" }}>
@@ -451,7 +455,7 @@ function AdminFacilities() {
                                   fontWeight: 600,
                                 }}
                               >
-                                {slot.doctorEmail}
+                                {slot.doctorEmail || "Open"}
                               </span>
                             </span>
                             <span>

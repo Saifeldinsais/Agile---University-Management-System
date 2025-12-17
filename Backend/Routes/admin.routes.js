@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../Controllers/admin.controller');
-
+const courseController = require("../Controllers/course.controller");
 // router.post("/signupAdmin",adminController.signUp);   // used one time to create admin in database 
-// router.post("/signinAdmin",adminController.signIn);
 
-router.post("/classrooms/:roomId/timeslots", adminController.addTimeSlot);
-router.patch("/classrooms/:roomId/timeslots/:slotId", adminController.updateTimeSlot);
-router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTimeSlot);
+
+router.post("/classrooms/:roomId/timeslots", adminController.addTimeSlot); // DONE EAV MODEL
+router.patch("/classrooms/:roomId/timeslots/:slotId", adminController.updateTimeSlot); // DONE EAV MODEL
+router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTimeSlot); // DONE EAV MODEL
 
 
 router.route('/classrooms')
@@ -23,17 +23,19 @@ router.route('/classrooms/:id')
 .get(adminController.getClassroomStatus)
 
 //==================== courses =====================  
+// router
+//   .route("/courses")
+//   .post(adminController.createCourse)
+//   .get(adminController.getCourses);
 
-
-router
-  .route("/courses")
-  .post(adminController.createCourse)
-  .get(adminController.getCourses);
-
-router
-  .route("/courses/:id")
-  .delete(adminController.deleteCourse)
-  .patch(adminController.updateCourse);
+// router
+//   .route("/courses/:id")
+//   .delete(adminController.deleteCourse)
+//   .patch(adminController.updateCourse);
+router.post("/courses", courseController.createCourse);
+router.get("/courses", courseController.getCourses);
+router.patch("/courses/:id", courseController.updateCourse);
+router.delete("/courses/:id", courseController.deleteCourse);
 
 //==================== assigning functions ====================
 
@@ -51,7 +53,7 @@ router.patch('/enrollments/:student/accept', adminController.acceptEnrollments);
 router.patch('/enrollments/:student/reject', adminController.rejectEnrollments);
 
 //==================== get students ====================
-router.get('/students', adminController.getStudents);
+router.get('/students', adminController.getStudents); // DONE EAV MODEL
 
 
 
