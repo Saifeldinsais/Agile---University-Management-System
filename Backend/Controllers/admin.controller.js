@@ -15,6 +15,11 @@ const createClassroom = async (req, res) => {
       });
     }
 
+    const existingClassroom = await adminService.getClassroomByName(roomName);
+    if (existingClassroom) {
+      return res.status(400).json({ status: "fail", message: "Classroom with this name already exists" });
+    }
+
     if (timeslots) {
       if (!Array.isArray(timeslots)) {
         return res.status(400).json({ status: "fail", message: "timeslots must be an array" });
@@ -108,6 +113,10 @@ const updateClassroom = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    const existingclassroom = await adminService.getClassroomById(id);
+    if (!existingclassroom) {
+      return res.status(404).json({ status: "fail", message: "Classroom not found" });
+    }
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ status: "fail", message: "No update data provided" });
     }
@@ -144,7 +153,7 @@ const getClassroomStatus = async (req, res) => {
     }
 
     // status logic: currently based on 'isWorking' flag
-    const status = classroom.isWorking ? "working" : "not working";
+    const status = classroom.isworking
 
     res.status(200).json({
       status: "success",
@@ -230,10 +239,6 @@ const assignCourseToDoctor = async (req, res) => {
       return res.status(400).json({ status: "fail", message: result.message });
     }
 
-    // Return updated doctor info if possible, or just success
-    // Original returned doctor object. 
-    // We'd need to fetch doctor (User) and full structure.
-    // For MVP, success message or simple object.
     res.status(200).json({ status: "success", message: "Course assigned to doctor" });
 
   } catch (error) {
@@ -367,13 +372,7 @@ const acceptEnrollments = async (req, res) => {
 
     // Check if any updated?
     if (!result.data || result.data.length === 0) {
-      // Maybe no pending enrollments or student not found
-      // But original returned 404 if no pending.
-      // We can check this by first fetching pending?
-      // Or just return success with empty list if that's acceptable.
-      // Original: 404 if no pending enr found.
-      // Our service: updates where status='pending'. If none, affectedRows=0.
-      // We can refine service to check affectedRows but current return is fine.
+
       return res.status(404).json({ message: "No pending enrollments found for this student" });
     }
 

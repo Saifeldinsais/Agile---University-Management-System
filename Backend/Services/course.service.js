@@ -57,7 +57,7 @@ const CourseService = {
     }
   },
 
-  // يرجّع كل الكورسات كـ object جاهز للـ frontend
+
   getAllCoursesDetailed: async () => {
     try {
       await initializeCourseAttributes();
@@ -90,7 +90,7 @@ const CourseService = {
       const course = await CourseEntity.getCourseById(id);
       if (!course) return { success: false, message: "Course not found" };
 
-      // لو title اتغير، حدّث entity_name كمان
+
       if (data.title) await CourseEntity.updateCourse(id, data.title);
 
       const upsert = async (attrName, value, isNumber = false) => {

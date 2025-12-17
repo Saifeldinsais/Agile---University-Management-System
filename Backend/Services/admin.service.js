@@ -114,7 +114,7 @@ const adminService = {
       await ClassroomValue.createClassroomValue(classroomEntityId, isworkingAttr.attribute_id, { value_string: isworking });
 
       if (Array.isArray(timeslots)) {
-        for (let i = 0; i < timeslots.length; i++) {
+        for (let i = 1; i < timeslots.length; i++) {
           await ClassroomValue.createClassroomValue(
             classroomEntityId,
             timeslotAttr.attribute_id,
@@ -135,21 +135,9 @@ const adminService = {
   getClassroom: async () => {
     try {
       const classrooms = await ClassroomEntity.getAllClassrooms();
-      // Need to fetch attributes? getAllClassrooms only returns entity info usually.
-      // Ideally we need to populate attributes for each classroom. 
-      // This might be expensive loop or complex join. 
-      // For now, assuming getAllClassrooms joins data or we iterate. 
-      // Wait, ClassroomEntity.getAllClassrooms() implementation?
-      // "SELECT * FROM classroom_entities" -> just id and name.
-      // We should enrich this. 
 
-      // For MVP, let's return entities and let frontend fetch details or enrich here.
-      // Let's enrich:
       for (let c of classrooms) {
-        // Fetch simple attributes to return a useful object
-        // This matches Mongoose structure
-        // We can implement a bulk fetch later if performance is issue.
-        // For now, we trust the caller might use getClassroomById for details or we return simple list.
+
       }
       return { success: true, classrooms };
     } catch (error) {
@@ -196,7 +184,6 @@ const adminService = {
         roomName,
         capacity,
         type,
-        isWorking: isworking === 'true' || isworking === true,
         isworking: isworking,
         bookedSchedule,
         requested_by,
@@ -298,32 +285,30 @@ const adminService = {
 
   updateTimeSlot: async (roomId, slotId, updatedTimeSlot) => {
     try {
-      // Fetch existing to keep array_index
-      const existing = await ClassroomValue.getCourseValue(roomId, null); // wait, we need specific value by ID. 
-      // course_value.js has getCourseValue but it takes entity_id/attr_id? No, getCourseValue takes entity/attr.
-      // We need get by value_id? 
-      // user_value.js has 'getValue' taking (entity_id, attribute_id). Not by value_id?
-      // user_value.js has 'updateValue' taking value_id.
-      // We need to fetch the value by value_id to get its current array_index?
-      // user_value.js does NOT have 'getValueById'.
-      // But we can just run a query or use the one from original service logic which used pool directly!
+        await initializeAttributes();
+        const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
 
-      const [rows] = await pool.query("SELECT * FROM entity_attribute WHERE value_id = ?", [slotId]);
-      // wait, is it entity_attribute or classroom_value uses classroom_entity_attribute?
-      // ClassroomValue file uses classroom_entity_attribute? YES.
+        // 1. Fetch the existing record to get its current array_index
+        const [existing] = await pool.query(
+            "SELECT array_index FROM classroom_entity_attribute WHERE value_id = ? AND entity_id = ?",
+            [slotId, roomId]
+        );
 
-      const [row] = await pool.query("SELECT array_index FROM classroom_entity_attribute WHERE value_id = ?", [slotId]);
-      const idx = row && row.length > 0 ? row[0].array_index : 0;
+        if (!existing || existing.length === 0) {
+            return { success: false, message: "Time slot not found" };
+        }
 
-      await ClassroomValue.updateClassroomValue(slotId, {
-        value_string: JSON.stringify(updatedTimeSlot),
-        array_index: idx
-      });
-      return { success: true };
+        const success = await ClassroomValue.updateClassroomValue(slotId, {
+            value_string: JSON.stringify(updatedTimeSlot),
+            array_index: existing[0].array_index 
+        });
+
+        return { success: success };
     } catch (error) {
-      return { success: false, message: error.message };
+        console.error("Service Error:", error);
+        return { success: false, message: error.message };
     }
-  },
+},
 
   deleteTimeSlot: async (roomId, slotId) => {
     try {
