@@ -5,7 +5,7 @@ const userAuthService = require("../Services/userAuth.service");
 
 const signUp = async (req, res) => {
     try {
-        const { username, email, password, confirmpassword} = req.body;
+        const { username, email, password, confirmpassword } = req.body;
 
         if (!username || !email || !password || !confirmpassword) {
             return res.status(400).json({ message: "All fields are required" });
@@ -15,9 +15,9 @@ const signUp = async (req, res) => {
             return res.status(400).json({ message: "Passwords do not match" });
         }
 
-                                                        ////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////
         if (email.toLowerCase().includes("@admin")) {  // if you want to create admin for the time comment this if block//
-                                                    ////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////
             return res.status(400).json({ message: "Cannot register as admin" });
         }
 
@@ -30,7 +30,7 @@ const signUp = async (req, res) => {
             return res.status(400).json({ message: "Invalid email domain for registration" });
         }
         const existinguser = await userAuthService.checkUserExists(email);
-       if (existinguser) {
+        if (existinguser) {
             return res.status(400).json({ message: "User with this email already exists" });
         }
 
@@ -47,11 +47,11 @@ const signUp = async (req, res) => {
 
         const token = JWT.sign(
             { id: result.userId, username: username, role: type },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRATION }
-        );      
+            process.env.JWT_SECRET || "default_secret_key_change_in_production",
+            { expiresIn: process.env.JWT_EXPIRATION || "7d" }
+        );
 
-        
+
 
         if (result.success) {
             return res.status(201).json({
@@ -93,14 +93,14 @@ const signIn = async (req, res) => {
 
         const token = JWT.sign(
             { id: result.user?.id, email: email, role: type },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRATION }
+            process.env.JWT_SECRET || "default_secret_key_change_in_production",
+            { expiresIn: process.env.JWT_EXPIRATION || "7d" }
         );
 
         if (result.success) {
             return res.status(200).json({
                 status: "Success",
-                user : result.user,
+                user: result.user,
                 token: token
             });
         }

@@ -17,8 +17,10 @@ import AdminDashboard from "./pages/admin/dashboard";
 import AdminFacilities from "./pages/admin/AdminFacilities";
 
 
-import StudentDashboard from "./pages/student/Dashboard"
-import StudentHome from "./pages/student/Home"
+import StudentDashboard from "./pages/student/Dashboard";
+import StudentHome from "./pages/student/Home";
+
+import DoctorHome from "./pages/doctor/Home";
 
 import AdminCurriculum from "./pages/admin/AdminCurriculum";
 
@@ -46,12 +48,19 @@ function App() {
 
 
       {/* Student PAGES */}
-      <Route path="student" element={<StudentLayout/>} >
-        <Route path="dashboard" element={<StudentDashboard/>} />
-        <Route path="facilities" element={<NotImplemented/>} />
-        <Route index element={<StudentHome/>} />
+      <Route path="student" element={<StudentLayout />} >
+        <Route path="dashboard" element={<StudentDashboard />} />
+        <Route path="facilities" element={<NotImplemented />} />
+        <Route index element={<StudentHome />} />
       </Route>
 
+      {/* Doctor/Teacher PAGES */}
+      <Route path="doctor" element={<MainLayout />}>
+        <Route index element={<DoctorHome />} />
+        <Route path="courses" element={<NotImplemented />} />
+        <Route path="students" element={<NotImplemented />} />
+        <Route path="grades" element={<NotImplemented />} />
+      </Route>
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../Controllers/admin.controller');
-
+const courseController = require("../Controllers/course.controller");
 // router.post("/signupAdmin",adminController.signUp);   // used one time to create admin in database 
 
 
@@ -23,15 +23,19 @@ router.route('/classrooms/:id')
 .get(adminController.getClassroomStatus)
 
 //==================== courses =====================  
-router
-  .route("/courses")
-  .post(adminController.createCourse)
-  .get(adminController.getCourses);
+// router
+//   .route("/courses")
+//   .post(adminController.createCourse)
+//   .get(adminController.getCourses);
 
-router
-  .route("/courses/:id")
-  .delete(adminController.deleteCourse)
-  .patch(adminController.updateCourse);
+// router
+//   .route("/courses/:id")
+//   .delete(adminController.deleteCourse)
+//   .patch(adminController.updateCourse);
+router.post("/courses", courseController.createCourse);
+router.get("/courses", courseController.getCourses);
+router.patch("/courses/:id", courseController.updateCourse);
+router.delete("/courses/:id", courseController.deleteCourse);
 
 //==================== assigning functions ====================
 

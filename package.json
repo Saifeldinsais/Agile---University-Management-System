@@ -1,0 +1,15 @@
+{
+    "name": "university-management-system",
+    "version": "1.0.0",
+    "description": "Root package for University Management System",
+    "scripts": {
+        "install-all": "npm install && npm install --prefix Backend && npm install --prefix frontend",
+        "dev": "concurrently \"npm run start --prefix Backend\" \"npm run dev --prefix frontend\""
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "concurrently": "^9.1.0"
+    }
+}

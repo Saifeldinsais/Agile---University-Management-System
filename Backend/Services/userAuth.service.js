@@ -1,37 +1,37 @@
-const entity = require("../EAV models/Entity");
-const attribute = require("../EAV models/Attribute");
-const value = require("../EAV models/Value");
+const entity = require("../EAV models/user_entity");
+const attribute = require("../EAV models/user_attribute");
+const value = require("../EAV models/user_value");
 const bcrypt = require("bcryptjs");
 const JWT = require("jsonwebtoken");
 
 let attributesInitialized = false;
 const initializeAttributes = async () => {
-  if (attributesInitialized) return;
-  
-  try {
-    const emailAttr = await attribute.getAttributeByName("email");
-    if (!emailAttr) {
-      await attribute.create("email", "string");
-      console.log("Created email attribute");
+    if (attributesInitialized) return;
+
+    try {
+        const emailAttr = await attribute.getAttributeByName("email");
+        if (!emailAttr) {
+            await attribute.create("email", "string");
+            console.log("Created email attribute");
+        }
+
+        const passwordAttr = await attribute.getAttributeByName("password");
+        if (!passwordAttr) {
+            await attribute.create("password", "string");
+            console.log("Created password attribute");
+        }
+
+        const usernameAttr = await attribute.getAttributeByName("username");
+        if (!usernameAttr) {
+            await attribute.create("username", "string");
+            console.log("Created username attribute");
+        }
+
+        attributesInitialized = true;
+        console.log("Attributes initialized");
+    } catch (error) {
+        console.error("Error initializing attributes:", error.message);
     }
-    
-    const passwordAttr = await attribute.getAttributeByName("password");
-    if (!passwordAttr) {
-      await attribute.create("password", "string");
-      console.log("Created password attribute");
-    }
-    
-    const usernameAttr = await attribute.getAttributeByName("username");
-    if (!usernameAttr) {
-      await attribute.create("username", "string");
-      console.log("Created username attribute");
-    }
-    
-    attributesInitialized = true;
-    console.log("Attributes initialized");
-  } catch (error) {
-    console.error("Error initializing attributes:", error.message);
-  }
 };
 
 
@@ -117,9 +117,9 @@ const userAuthService = {
                 { expiresIn: "7d" }
             );
 
-            return { 
-                success: true, 
-                token, 
+            return {
+                success: true,
+                token,
                 user: {
                     id: user.entity_id,
                     email: email,
@@ -128,7 +128,7 @@ const userAuthService = {
                 }
             };
         } catch (error) {
-            return { success: false, message: error.message , user: null };
+            return { success: false, message: error.message, user: null };
         }
     },
 

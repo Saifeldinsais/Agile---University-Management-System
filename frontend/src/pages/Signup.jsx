@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { registerUser } from "../services/authService";
-import {useNavigate} from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 function Signup() {
   const navigate = useNavigate();
@@ -26,13 +26,15 @@ function Signup() {
         confirmpassword: confirmPassword,
       });
 
+      console.log("Signup successful:", data);
       setStatus("Account created successfully!");
-      navigate("/login");
+      setTimeout(() => navigate("/login"), 1500);
 
     } catch (err) {
+      console.error("Signup error details:", err?.response?.data);
       const msg =
         err?.response?.data?.message ||
-        err.message ||
+        err?.message ||
         "Signup failed. Please try again.";
       setStatus(msg);
     }
@@ -58,8 +60,11 @@ function Signup() {
           className="auth-input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="name@example.com"
+          placeholder="john@ums-student.com or jane@ums-doctor.com"
         />
+        <p className="auth-hint">
+          Use <strong>@ums-student.com</strong> for students or <strong>@ums-doctor.com</strong> for teachers
+        </p>
 
         <label className="auth-label">Password</label>
         <input
@@ -86,9 +91,8 @@ function Signup() {
 
       {status && (
         <p
-          className={`auth-status ${
-            status.includes("success") ? "success" : "error"
-          }`}
+          className={`auth-status ${status.includes("success") ? "success" : "error"
+            }`}
         >
           {status}
         </p>
