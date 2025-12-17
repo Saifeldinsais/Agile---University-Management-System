@@ -20,7 +20,7 @@ router.route('/classrooms/:id')
   .delete(adminController.deleteClassroom); // DONE EAV MODEL
 
   router.route('/classrooms/:id/status')
-.get(adminController.getClassroomStatus)
+.get(adminController.getClassroomStatus) // DONE EAV MODEL
 
 //==================== courses =====================  
 // router
@@ -32,10 +32,10 @@ router.route('/classrooms/:id')
 //   .route("/courses/:id")
 //   .delete(adminController.deleteCourse)
 //   .patch(adminController.updateCourse);
-router.post("/courses", courseController.createCourse);
-router.get("/courses", courseController.getCourses);
-router.patch("/courses/:id", courseController.updateCourse);
-router.delete("/courses/:id", courseController.deleteCourse);
+router.post("/courses", courseController.createCourse); // DONE EAV MODEL
+router.get("/courses", courseController.getCourses); // DONE EAV MODEL
+router.patch("/courses/:id", courseController.updateCourse);  // DONE EAV MODEL
+router.delete("/courses/:id", courseController.deleteCourse); // DONE EAV MODEL
 
 //==================== assigning functions ====================
 
