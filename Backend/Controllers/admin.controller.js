@@ -1,16 +1,17 @@
 const adminService = require("../Services/admin.service");
+const pool = require("../Db_config/DB");
 
 // ================= CLASSROOMS =================
 
 const createClassroom = async (req, res) => {
   try {
-    const { roomName, capacity, type, isworking, timeslots } = req.body;
+    const { roomName, capacity, type, isworking = 'true', timeslots } = req.body;
 
     // Validate required fields
-    if (!roomName || capacity == null || !type || isworking == null) {
+    if (!roomName || capacity == null || !type) {
       return res.status(400).json({
         status: "fail",
-        message: "roomName, capacity, type, and isworking are required",
+        message: "roomName, capacity, and type are required",
       });
     }
 
@@ -54,14 +55,48 @@ const createClassroom = async (req, res) => {
 
 const getClassrooms = async (req, res) => {
   try {
-    const result = await adminService.getClassroom();
-    if (!result.success) {
-      return res.status(500).json({ status: "error", message: result.message });
-    }
+    // Query classrooms with their attributes
+    const [rows] = await pool.query(`
+      SELECT 
+        ce.entity_id AS _id,
+        ce.entity_id AS id,
+        MAX(CASE WHEN ca.attribute_name='roomName' THEN cea.value_string END) AS roomName,
+        MAX(CASE WHEN ca.attribute_name='capacity' THEN cea.value_number END) AS capacity,
+        MAX(CASE WHEN ca.attribute_name='type' THEN cea.value_string END) AS type,
+        MAX(CASE WHEN ca.attribute_name='isworking' THEN cea.value_string END) AS isworking,
+        GROUP_CONCAT(
+          CASE 
+            WHEN ca.attribute_name='timeslot' THEN CONCAT(cea.value_id, ':::', cea.value_string) 
+          END SEPARATOR '|||'
+        ) AS timeslotsRaw
+      FROM classroom_entity ce
+      LEFT JOIN classroom_entity_attribute cea ON ce.entity_id = cea.entity_id
+      LEFT JOIN classroom_attributes ca ON cea.attribute_id = ca.attribute_id
+      GROUP BY ce.entity_id
+      ORDER BY ce.entity_id DESC
+    `);
+
+    const classrooms = rows.map(row => ({
+      _id: row._id,
+      id: row.id,
+      roomName: row.roomName,
+      capacity: row.capacity,
+      type: row.type,
+      isworking: row.isworking,
+      timeSlots: row.timeslotsRaw ? row.timeslotsRaw.split('|||').map(s => {
+        if (!s) return null;
+        const [valId, jsonStr] = s.split(':::');
+        try {
+          const obj = JSON.parse(jsonStr);
+          return { ...obj, _id: valId }; // Attach value_id as _id
+        } catch (e) { return null; }
+      }).filter(s => s) : []
+    }));
+
     res.status(200).json({
       status: "success",
-      results: result.classrooms.length,
-      data: { classrooms: result.classrooms },
+      results: classrooms.length,
+      data: { classrooms },
     });
   } catch (error) {
     res.status(500).json({ status: "error", message: "Failed to fetch classrooms", error: error.message });
@@ -232,17 +267,13 @@ const unassignCourseFromDoctor = async (req, res) => {
 const addTimeSlot = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { day, start, end } = req.body;
+    const { day, start, end, doctorEmail } = req.body;
 
     if (!day || !start || !end) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Conflict checking is nice to do here or in service. 
-    // Service's addTimeSlot just adds. 
-    // Original controller did conflict check. 
-
-    // Let's implement basic conflict check by fetching existing slots
+    // Conflict checking
     const classroom = await adminService.getClassroomById(roomId);
     if (!classroom) return res.status(404).json({ message: "Classroom not found" });
 
@@ -253,10 +284,11 @@ const addTimeSlot = async (req, res) => {
     });
 
     if (conflict) {
+      console.log("Conflict detected:", { day, start, end }, "vs existing:", existingSlots);
       return res.status(400).json({ message: "Time slot conflicts with existing schedule" });
     }
 
-    const result = await adminService.addTimeSlot(roomId, { day, start, end });
+    const result = await adminService.addTimeSlot(roomId, { day, start, end, doctorEmail });
     if (!result.success) {
       return res.status(400).json({ message: result.message });
     }
@@ -271,7 +303,7 @@ const addTimeSlot = async (req, res) => {
 const updateTimeSlot = async (req, res) => {
   try {
     const { roomId, slotId } = req.params;
-    const { day, start, end } = req.body;
+    const { day, start, end, doctorEmail } = req.body;
 
     if (!day || !start || !end) {
       return res.status(400).json({ message: "All fields are required" });
@@ -283,22 +315,18 @@ const updateTimeSlot = async (req, res) => {
 
     // Conflict check
     const existingSlots = classroom.timeslots || [];
-    // Note: slotId in EAV is value_id. array_index is loop index?
-    // Service updateTimeSlot takes slotId (value_id).
-    // Conflict check logic needs to know WHICH slot we are updating to ignore it. 
-    // But `getClassroomById` returns array of objects, likely without value_id attached directly in `timeslots` array unless we handled it.
-    // In my `getClassroomById` service method, I returned `timeslots` as array of JSON parsed objects. 
-    // If we want to exclude current slot, we need to know its contents BEFORE update or its ID match. 
-    // But `timeslots` array doesn't have IDs.
+    const conflict = existingSlots.some(slot => {
+      // Ignore the slot we are updating (compare value_id)
+      if (String(slot.id) === String(slotId) || String(slot._id) === String(slotId)) return false;
+      if (slot.day !== day) return false;
+      return (start < slot.end && end > slot.start);
+    });
 
-    // Simpler approach: Just call service update?
-    // Or fetch specific slot value to skip?
-    // For now, let's assume service handles update.
-    // But we did manual conflict check in original.
-    // Let's rely on service or client validation, OR re-implement strict check if critical.
-    // Given complexity of EAV conflict Check without IDs in list, I'll attempt basic check if possible.
+    if (conflict) {
+      return res.status(400).json({ message: "Time slot conflicts with existing schedule" });
+    }
 
-    const result = await adminService.updateTimeSlot(roomId, slotId, { day, start, end });
+    const result = await adminService.updateTimeSlot(roomId, slotId, { day, start, end, doctorEmail });
     if (!result.success) return res.status(400).json({ message: result.message });
 
     res.status(200).json({ status: "success", message: "Time slot updated successfully" });

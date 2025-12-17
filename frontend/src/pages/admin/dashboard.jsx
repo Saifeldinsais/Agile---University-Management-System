@@ -11,6 +11,7 @@ function Dashboard() {
     halls: 0,
     labs: 0,
     totalTimeSlots: 0,
+    totalCapacity: 0,
     totalCourses: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -28,11 +29,8 @@ function Dashboard() {
           apiClient.get("/student/viewCourses"),
         ]);
 
-        const classrooms = Array.isArray(roomsRes.data?.data)
-          ? roomsRes.data.data
-          : Array.isArray(roomsRes.data)
-          ? roomsRes.data
-          : [];
+        // Backend response: { data: { classrooms: [...] } }
+        const classrooms = roomsRes.data?.data?.classrooms || roomsRes.data?.classrooms || [];
 
         const courses = Array.isArray(coursesRes.data)
           ? coursesRes.data
@@ -45,6 +43,10 @@ function Dashboard() {
           (sum, r) => sum + ((r.timeSlots && r.timeSlots.length) || 0),
           0
         );
+        const totalCapacity = classrooms.reduce(
+          (sum, r) => sum + (parseInt(r.capacity) || 0),
+          0
+        );
         const totalCourses = courses.length;
 
         setStats({
@@ -52,6 +54,7 @@ function Dashboard() {
           halls,
           labs,
           totalTimeSlots,
+          totalCapacity,
           totalCourses,
         });
       } catch (err) {
@@ -217,6 +220,10 @@ function Dashboard() {
                 <tr>
                   <td>Total time slots</td>
                   <td>{loading ? "…" : stats.totalTimeSlots}</td>
+                </tr>
+                <tr>
+                  <td>Total Student Capacity</td>
+                  <td>{loading ? "…" : stats.totalCapacity}</td>
                 </tr>
                 <tr>
                   <td>Total courses</td>

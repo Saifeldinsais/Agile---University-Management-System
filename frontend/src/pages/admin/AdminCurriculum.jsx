@@ -38,8 +38,8 @@ function AdminCurriculum() {
       console.error(err);
       setError(
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to load courses."
+        err.message ||
+        "Failed to load courses."
       );
     } finally {
       setLoading(false);
@@ -80,8 +80,8 @@ function AdminCurriculum() {
       console.error(err);
       setError(
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to save course."
+        err.message ||
+        "Failed to save course."
       );
     } finally {
       setLoading(false);
@@ -93,7 +93,7 @@ function AdminCurriculum() {
       title: course.title || "",
       code: course.code || "",
       description: course.description || "",
-      credits: course.credits || "",
+      credits: course.credits ? parseInt(course.credits) : "",
       department: course.department || "",
     });
     setIsEditing(true);
@@ -117,8 +117,8 @@ function AdminCurriculum() {
       console.error(err);
       setError(
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to delete course."
+        err.message ||
+        "Failed to delete course."
       );
     } finally {
       setLoading(false);
@@ -370,7 +370,7 @@ function AdminCurriculum() {
                     <tr key={course._id}>
                       <td>{course.title}</td>
                       <td>{course.code}</td>
-                      <td>{course.credits}</td>
+                      <td>{parseInt(course.credits)}</td>
                       <td>{course.department}</td>
                       <td>{course.description || "-"}</td>
                       <td>

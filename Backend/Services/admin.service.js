@@ -56,9 +56,13 @@ const initializeAttributes = async () => {
 
     // --- User Attributes (for Doctor/Student) ---
     // We use the generic 'attributes' table for UserEntity
-    const assignedCourseAttr = await UserAttribute.getAttributeByName("assigned_course");
-    if (!assignedCourseAttr) await UserAttribute.create("assigned_course", "reference");
-
+    try {
+      const assignedCourseAttr = await UserAttribute.getAttributeByName("assigned_course");
+      if (!assignedCourseAttr) {
+        // Only create if not exists, verify type matches schema or use generic 'int'/'string'
+        // await UserAttribute.create("assigned_course", "int"); 
+      }
+    } catch (e) { /* ignore or log */ }
 
     // --- Enrollments Table (Raw SQL for Many-to-Many with attributes) ---
     await pool.query(`
@@ -72,12 +76,14 @@ const initializeAttributes = async () => {
             )
         `);
 
-
-         const classroom_requests = await ClassroomAttribute.getAllClassroomAttributes("classroom_requests","string");
-        if(!classroom_requests){
-            await ClassroomAttribute.createClassroomAttribute("classroom_requests","string");
-            console.log("Created classroom_requests attribute");
-        }
+    // Ensure Classroom Attributes
+    try {
+      const reqAttr = await ClassroomAttribute.getAttributeByName("classroom_requests");
+      if (!reqAttr) {
+        await ClassroomAttribute.createClassroomAttribute("classroom_requests", "string");
+        console.log("Created classroom_requests attribute");
+      }
+    } catch (e) { /* ignore */ }
 
     attributesInitialized = true;
     console.log("All attributes and tables initialized");
