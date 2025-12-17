@@ -496,68 +496,88 @@ const addTimeSlot = async (req, res) => {
 const updateTimeSlot = async (req, res) => {
   try {
     const { roomId, slotId } = req.params;
-    const { day, start, end, doctorEmail } = req.body;
+    const { day, start, end } = req.body;
 
-    const classroom = await Classroom.findById(roomId);
+
+    if (!day || !start || !end) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+
+    const classroom = await adminService.getClassroomById(roomId);
     if (!classroom) {
       return res.status(404).json({ message: "Classroom not found" });
     }
 
-    const slot = classroom.timeSlots.id(slotId);
-    if (!slot) {
-      return res.status(404).json({ message: "Time slot not found" });
-    }
+    const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
+    const existingValues = await ClassroomValue.getAllClassroomValues(
+      roomId,
+      timeslotAttr.attribute_id
+    );
 
-    // check conflict with OTHER slots
-    const conflict = classroom.timeSlots.some((s) => {
-      if (s._id.toString() === slotId) return false;
-      if (s.day !== day) return false;
-      return !(end <= s.start || start >= s.end);
+    const existingSlots = existingValues.map(v => ({
+      id: v.value_id,
+      data: typeof v.value_string === 'string' ? JSON.parse(v.value_string) : v.value_string
+    }));
+
+   
+    const conflict = existingSlots.some(slot => {
+      if (slot.id === parseInt(slotId)) return false;
+      const details = slot.data;
+      if (details.day !== day) return false;
+      
+
+      return (start < details.end && end > details.start);
     });
 
     if (conflict) {
-      return res
-        .status(400)
-        .json({ message: "Time slot conflicts with existing schedule" });
+      return res.status(400).json({ message: "Updated time slot conflicts with existing schedule" });
     }
 
-    slot.day = day;
-    slot.start = start;
-    slot.end = end;
-    slot.doctorEmail = doctorEmail;
-    await classroom.save();
+    // 5. Proceed with update
+    const result = await adminService.updateTimeSlot(roomId, slotId, {
+      day,
+      start,
+      end
+    });
 
-    res.json({
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    res.status(200).json({
       status: "success",
-      data: { classroom },
+      message: "Time slot updated successfully"
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error updating time slot" });
   }
 };
-
 // Delete time slot
 const deleteTimeSlot = async (req, res) => {
-  try {
+ try {
     const { roomId, slotId } = req.params;
 
-    const classroom = await Classroom.findById(roomId);
+
+    const classroom = await adminService.getClassroomById(roomId);
     if (!classroom) {
       return res.status(404).json({ message: "Classroom not found" });
     }
 
-    classroom.timeSlots = classroom.timeSlots.filter(
-      (slot) => slot._id.toString() !== slotId
-    );
-    await classroom.save();
 
-    res.json({
+    const result = await adminService.deleteTimeSlot(roomId, slotId);
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    res.status(200).json({
       status: "success",
-      data: { classroom },
+      message: "Time slot deleted successfully"
     });
   } catch (err) {
-    console.error(err);
+    console.error("Controller Error:", err);
     res.status(500).json({ message: "Error deleting time slot" });
   }
 };

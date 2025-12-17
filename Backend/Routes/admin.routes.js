@@ -6,8 +6,8 @@ const adminController = require('../Controllers/admin.controller');
 
 
 router.post("/classrooms/:roomId/timeslots", adminController.addTimeSlot); // DONE EAV MODEL
-router.patch("/classrooms/:roomId/timeslots/:slotId", adminController.updateTimeSlot);
-router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTimeSlot);
+router.patch("/classrooms/:roomId/timeslots/:slotId", adminController.updateTimeSlot); // DONE EAV MODEL
+router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTimeSlot); // DONE EAV MODEL
 
 
 router.route('/classrooms')
@@ -23,8 +23,6 @@ router.route('/classrooms/:id')
 .get(adminController.getClassroomStatus)
 
 //==================== courses =====================  
-
-
 router
   .route("/courses")
   .post(adminController.createCourse)

@@ -233,6 +233,57 @@ addTimeSlot: async (roomId, timeSlot) => {
     } catch (error) {
       throw error;
     }
+  },
+    updateTimeSlot: async (roomId, slotId, updatedTimeSlot) => {
+    try {
+        await initializeAttributes();
+        const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
+
+        // 1. Fetch the existing record to get its current array_index
+        const [existing] = await pool.query(
+            "SELECT array_index FROM classroom_entity_attribute WHERE value_id = ? AND entity_id = ?",
+            [slotId, roomId]
+        );
+
+        if (!existing || existing.length === 0) {
+            return { success: false, message: "Time slot not found" };
+        }
+
+        // 2. Pass the existing index back into the update function
+        const success = await ClassroomValue.updateClassroomValue(slotId, {
+            value_string: JSON.stringify(updatedTimeSlot),
+            array_index: existing[0].array_index // Keep the original index (1, 2, 3, etc.)
+        });
+
+        return { success: success };
+    } catch (error) {
+        console.error("Service Error:", error);
+        return { success: false, message: error.message };
+    }
+},
+deleteTimeSlot: async (roomId, slotId) => {
+  try {
+    await initializeAttributes();
+    const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot"); //
+    const [rows] = await pool.query(
+      "SELECT value_id FROM classroom_entity_attribute WHERE value_id = ? AND entity_id = ? AND attribute_id = ?",
+      [slotId, roomId, timeslotAttr.attribute_id]
+    );
+
+    if (rows.length === 0) {
+      return { success: false, message: "Time slot not found for this classroom" };
+    }
+
+
+    const success = await ClassroomValue.deleteClassroomValue(slotId); //
+
+    return { success: success };
+  } catch (error) {
+    console.error("Service Error:", error);
+    return { success: false, message: error.message };
   }
+}
+
+
 };
 module.exports = adminService;
