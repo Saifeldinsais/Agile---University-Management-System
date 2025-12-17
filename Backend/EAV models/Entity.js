@@ -46,7 +46,14 @@ const Entity = {
     );
     return rows;
 
-  }
+  },
+  delete: async (id) => {
+    const [result] = await pool.query(
+      "DELETE FROM entities WHERE entity_id = ?",
+      [id]
+    );
+    return result.affectedRows > 0;
+  },
 };
 
 module.exports = Entity;

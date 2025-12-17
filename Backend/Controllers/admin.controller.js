@@ -1,9 +1,9 @@
 const Classroom = require("../Models/classroom.model");
-const Course = require("../Models/course.model");
+const courseService = require("../Services/course.service");
 const Doctor = require("../Models/doctor.model");
 const JWT = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const Enrollment = require("../Models/enrollment.model")
+const enrollmentService = require("../Services/enrollment.service");
 const Student = require("../Models/student.model");
 
 const adminService = require("../Services/admin.service");
@@ -74,7 +74,6 @@ const createClassroom = async (req, res) => {
   }
 };
 
-
 const getClassrooms = async (req, res) => {
   try {
     const result = await adminService.getClassroom();
@@ -135,38 +134,38 @@ const updateClassroom = async (req, res) => {
 };
 
 const deleteClassroom = async (req, res) => {
-    try {
-        const classroom = await adminService.getClassroomById(req.params.id)
+  try {
+    const classroom = await adminService.getClassroomById(req.params.id)
 
-        if (!classroom) {
-            return res.status(404).json({ status: "fail", message: "Classroom not found" })
-        }
-        const result = await adminService.deleteClassroom(req.params.id)
+    if (!classroom) {
+      return res.status(404).json({ status: "fail", message: "Classroom not found" })
+    }
+    const result = await adminService.deleteClassroom(req.params.id)
 
-        if (!result.success) {
-            return res.status(400).json({ status: "fail", message: result.message })
-        }
-        res.status(200).json({ status: "success", message: "Classroom deleted successfully" })      
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message })
     }
-    catch (error) {
-        res.status(500).json({ status: "error", message: error.message })
-    }
+    res.status(200).json({ status: "success", message: "Classroom deleted successfully" })
+  }
+  catch (error) {
+    res.status(500).json({ status: "error", message: error.message })
+  }
 }
 
 const getClassroomStatus = async (req, res) => {
-    try {
-        const classroom = await Classroom.findById(req.params.id)
+  try {
+    const classroom = await Classroom.findById(req.params.id)
 
-        if (!classroom) {
-            return res.status(404).json({ status: "fail", message: "Classroom not found" })
-        }
-
-        const status = classroom.isWorking ? "working" : "not working";
-
-        res.status(200).json({ status: "success", data: { classroom, status, bookedDate: classroom.bookedSchedule, requestedBy: classroom.requested_by } })
-    } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message })
+    if (!classroom) {
+      return res.status(404).json({ status: "fail", message: "Classroom not found" })
     }
+
+    const status = classroom.isWorking ? "working" : "not working";
+
+    res.status(200).json({ status: "success", data: { classroom, status, bookedDate: classroom.bookedSchedule, requestedBy: classroom.requested_by } })
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message })
+  }
 }
 
 
@@ -174,72 +173,84 @@ const getClassroomStatus = async (req, res) => {
 
 
 const createCourse = async (req, res) => {
-    try {
-        const { title, code, description, credits, department } = req.body;
-        if (!title || !code || !credits || !department) {
-            return res.status(400).json({ message: "Required fields are missing" });
-        }
+  try {
+    const { title, code, description, credits, department } = req.body;
 
-        const existingCourse = await Course.findOne({ code: code });
-        if (existingCourse) {
-            return res.status(400).json({ message: "Course with this code already exists" });
-        }
-        const newCourse = await Course.create({
-            title,
-            code,
-            description,
-            credits,
-            department
-        });
-        res.status(201).json({
-            status: "Success",
-            data: { course: newCourse },
-        });
-
-    } catch (error) {
-        res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
+    if (!title || !code || credits == null || !department) {
+      return res.status(400).json({ message: "Required fields are missing" });
     }
 
+    const result = await courseService.create({
+      title,
+      code,
+      description: description || "",
+      credits: Number(credits),
+      department,
+    });
 
-}
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    return res.status(201).json({
+      status: "Success",
+      data: { courseId: result.id },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "Fail",
+      message: error.message || "An error occurred",
+    });
+  }
+};
 
 const deleteCourse = async (req, res) => {
-    try {
-        const deletedcourse = await Course.findByIdAndDelete(req.params.id);
+  try {
+    const courseId = Number(req.params.id);
 
-        if (!deletedcourse) {
-            return res.status(404).json({ status: "fail", message: "Course not found" });
-        }
-        const courses = await Course.find();
-
-        return res.status(200).json({ status: "success", data: courses })
-    } catch (error) {
-        return res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
+    const ok = await courseService.delete(courseId);
+    if (!ok) {
+      return res.status(404).json({ status: "fail", message: "Course not found" });
     }
-}
+
+    const courses = await courseService.getAll();
+    return res.status(200).json({ status: "success", data: courses });
+  } catch (error) {
+    return res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
+  }
+};
+
 
 
 const updateCourse = async (req, res) => {
-    try {
-        const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
+  try {
+    const courseId = Number(req.params.id);
 
-        if (!course) {
-            return res.status(404).json({ status: "fail", message: "Course not found" })
-        }
+    const ok = await courseService.update(courseId, {
+      title: req.body.title,
+      code: req.body.code,
+      description: req.body.description,
+      credits: req.body.credits != null ? Number(req.body.credits) : undefined,
+      department: req.body.department,
+    });
 
-        res.status(200).json({ status: "success", data: course })
-    } catch (error) {
-        return res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
+    if (!ok) {
+      return res.status(404).json({ status: "fail", message: "Course not found" });
     }
-}
+
+    return res.status(200).json({ status: "success", message: "Course updated" });
+  } catch (error) {
+    return res.status(400).json({ status: "Fail", message: error.message || "An error occurred" });
+  }
+};
+
 
 const getCourses = async (req, res) => {
   try {
-    const courses = await Course.find();
-
+    const result = await courseService.getAll(); // returns array
     return res.status(200).json({
       status: "success",
-      data: courses,
+      data: result,
     });
   } catch (error) {
     return res.status(500).json({
@@ -250,167 +261,168 @@ const getCourses = async (req, res) => {
 };
 
 
+
 //==================== assgining functions ==============================
 
 const assignClassroom = async (req, res) => {
-    try {
-        const { timeSlot, doctorId } = req.body;
-        const classroomId = req.params.id;
+  try {
+    const { timeSlot, doctorId } = req.body;
+    const classroomId = req.params.id;
 
-        if (!timeSlot || !doctorId || !classroomId) {
-            return res.status(400).json({
-                status: "fail",
-                message: "timeSlot, doctorId and classroomId are required",
-            });
-        }
-
-
-        const classroom = await Classroom.findById(classroomId);
-        if (!classroom) {
-            return res.status(404).json({ status: "fail", message: "Classroom not found" })
-        }
-
-        if (classroom.isWorking === false) {
-            return res.status(400).json({ status: "fail", message: "classroom is not working currently" })
-        }
-
-        if (classroom.bookedSchedule.includes(timeSlot)) {
-            return res.status(400).json({ status: "fail", message: "classroom not available at this time slot" })
-        }
-
-        const doctor = await Doctor.findById(doctorId);
-        if (!doctor) {
-            return res.status(404).json({ status: "fail", message: "Doctor not found" })
-        }
-
-        classroom.bookedSchedule.push(timeSlot)
-        classroom.requested_by.push(doctorId)
-        await classroom.save();
-        return res.status(200).json({ status: "success", data: classroom })
-
+    if (!timeSlot || !doctorId || !classroomId) {
+      return res.status(400).json({
+        status: "fail",
+        message: "timeSlot, doctorId and classroomId are required",
+      });
     }
-    catch (error) {
-        res.status(500).json({
-            status: 'error', message: error.message
-        })
+
+
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ status: "fail", message: "Classroom not found" })
     }
+
+    if (classroom.isWorking === false) {
+      return res.status(400).json({ status: "fail", message: "classroom is not working currently" })
+    }
+
+    if (classroom.bookedSchedule.includes(timeSlot)) {
+      return res.status(400).json({ status: "fail", message: "classroom not available at this time slot" })
+    }
+
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ status: "fail", message: "Doctor not found" })
+    }
+
+    classroom.bookedSchedule.push(timeSlot)
+    classroom.requested_by.push(doctorId)
+    await classroom.save();
+    return res.status(200).json({ status: "success", data: classroom })
+
+  }
+  catch (error) {
+    res.status(500).json({
+      status: 'error', message: error.message
+    })
+  }
 }
 
 const unassignClassroom = async (req, res) => {
-    try {
-        const { timeSlot, doctorId } = req.body;
-        const classroomId = req.params.id;
+  try {
+    const { timeSlot, doctorId } = req.body;
+    const classroomId = req.params.id;
 
-        if (!timeSlot || !doctorId || !classroomId) {
-            return res.status(400).json({
-                status: "fail",
-                message: "timeSlot, doctorId and classroomId are required",
-            });
-        }
-
-        const classroom = await Classroom.findById(classroomId);
-        if (!classroom) {
-            return res.status(404).json({ status: "fail", message: "Classroom not found" })
-        }
-
-        const doctor = await Doctor.findById(doctorId);
-        if (!doctor) {
-            return res.status(404).json({ status: "fail", message: "Doctor not found" })
-        }
-
-        const assignedSlot = classroom.bookedSchedule.indexOf(timeSlot);
-        if (assignedSlot === -1) {
-            return res.status(400).json({ status: "fail", message: "classroom is not assigned at this time slot" })
-        }
-
-        if (classroom.requested_by[assignedSlot].toString() !== doctorId) { // check kda 34an n4oof el7eta ely t7t deeh ynf3 n3mlha wla fe 7aga 8lt feldb (htfeed feltest)
-            return res.status(400).json({ status: "fail", message: "This timeslot's doctor doesn't match the doctor id" })
-        }
-
-        classroom.bookedSchedule.splice(assignedSlot, 1);
-        classroom.requested_by.splice(assignedSlot, 1) // kda kda e7na 3mleen push leldoctor id m3 eltimeslot fa eletneen nfs elindex
-
-        await classroom.save();
-        return res.status(200).json({ status: "success", data: classroom })
-
-    } catch (error) {
-        res.status(500).json({
-            status: 'error', message: error.message
-        })
+    if (!timeSlot || !doctorId || !classroomId) {
+      return res.status(400).json({
+        status: "fail",
+        message: "timeSlot, doctorId and classroomId are required",
+      });
     }
+
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ status: "fail", message: "Classroom not found" })
+    }
+
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ status: "fail", message: "Doctor not found" })
+    }
+
+    const assignedSlot = classroom.bookedSchedule.indexOf(timeSlot);
+    if (assignedSlot === -1) {
+      return res.status(400).json({ status: "fail", message: "classroom is not assigned at this time slot" })
+    }
+
+    if (classroom.requested_by[assignedSlot].toString() !== doctorId) { // check kda 34an n4oof el7eta ely t7t deeh ynf3 n3mlha wla fe 7aga 8lt feldb (htfeed feltest)
+      return res.status(400).json({ status: "fail", message: "This timeslot's doctor doesn't match the doctor id" })
+    }
+
+    classroom.bookedSchedule.splice(assignedSlot, 1);
+    classroom.requested_by.splice(assignedSlot, 1) // kda kda e7na 3mleen push leldoctor id m3 eltimeslot fa eletneen nfs elindex
+
+    await classroom.save();
+    return res.status(200).json({ status: "success", data: classroom })
+
+  } catch (error) {
+    res.status(500).json({
+      status: 'error', message: error.message
+    })
+  }
 
 
 }
 
 
 const assignCourseToDoctor = async (req, res) => {
-    try {
-        const courseId = req.params.id;
-        const { doctorId } = req.body;
+  try {
+    const courseId = req.params.id;
+    const { doctorId } = req.body;
 
-        if (!courseId || !doctorId) {
-            return res.status(400).json({ status: "fail", message: "course ID and Doctor Id is required" })
-        }
-
-        const course = await Course.findById(courseId);
-        const doctor = await Doctor.findById(doctorId);
-
-        if (!course) {
-            return res.status(404).json({ status: "fail", message: "Course not found" })
-        }
-
-        if (!doctor) {
-            return res.status(404).json({ status: "fail", message: "Doctor not found" })
-        }
-
-        if (!doctor.courses.includes(courseId)) {
-            doctor.courses.push(courseId)
-            await doctor.save()
-        }
-
-        res.status(200).json({ status: "success", data: doctor })
-
-    } catch (error) {
-        res.status(500).json({
-            status: 'error', message: error.message
-        })
+    if (!courseId || !doctorId) {
+      return res.status(400).json({ status: "fail", message: "course ID and Doctor Id is required" })
     }
+
+    const course = await Course.findById(courseId);
+    const doctor = await Doctor.findById(doctorId);
+
+    if (!course) {
+      return res.status(404).json({ status: "fail", message: "Course not found" })
+    }
+
+    if (!doctor) {
+      return res.status(404).json({ status: "fail", message: "Doctor not found" })
+    }
+
+    if (!doctor.courses.includes(courseId)) {
+      doctor.courses.push(courseId)
+      await doctor.save()
+    }
+
+    res.status(200).json({ status: "success", data: doctor })
+
+  } catch (error) {
+    res.status(500).json({
+      status: 'error', message: error.message
+    })
+  }
 }
 
 const unassignCourseFromDoctor = async (req, res) => {
-    try {
-        const courseId = req.params.id;
-        const { doctorId } = req.body;
+  try {
+    const courseId = req.params.id;
+    const { doctorId } = req.body;
 
-        if (!courseId || !doctorId) {
-            return res.status(400).json({ status: "fail", message: "course ID and Doctor Id is required" })
-        }
-
-        const course = await Course.findById(courseId);
-        const doctor = await Doctor.findById(doctorId);
-
-        if (!course) {
-            return res.status(404).json({ status: "fail", message: "Course not found" })
-        }
-
-        if (!doctor) {
-            return res.status(404).json({ status: "fail", message: "Doctor not found" })
-        }
-
-        if (!doctor.courses.includes(courseId)) {
-            return res.status(400).json({ status: "fail", message: "This course is not assigned to this doctor" })
-        }
-
-        const courseIndex = doctor.courses.indexOf(courseId)
-        doctor.courses.splice(courseIndex, 1);
-        await doctor.save()
-        res.status(200).json({ status: "success", data: doctor })
-
-    } catch (error) {
-        res.status(500).json({
-            status: 'error', message: error.message
-        })
+    if (!courseId || !doctorId) {
+      return res.status(400).json({ status: "fail", message: "course ID and Doctor Id is required" })
     }
+
+    const course = await Course.findById(courseId);
+    const doctor = await Doctor.findById(doctorId);
+
+    if (!course) {
+      return res.status(404).json({ status: "fail", message: "Course not found" })
+    }
+
+    if (!doctor) {
+      return res.status(404).json({ status: "fail", message: "Doctor not found" })
+    }
+
+    if (!doctor.courses.includes(courseId)) {
+      return res.status(400).json({ status: "fail", message: "This course is not assigned to this doctor" })
+    }
+
+    const courseIndex = doctor.courses.indexOf(courseId)
+    doctor.courses.splice(courseIndex, 1);
+    await doctor.save()
+    res.status(200).json({ status: "success", data: doctor })
+
+  } catch (error) {
+    res.status(500).json({
+      status: 'error', message: error.message
+    })
+  }
 }
 
 
@@ -527,59 +539,59 @@ const deleteTimeSlot = async (req, res) => {
 // View enrolled courses and accept/decline enrollment requests
 
 const acceptEnrollments = async (req, res) => {
-    try{
-        const { student } = req.params;
-        const enrollments = await Enrollment.find({ student: student, status: "pending" });
-        
-        if(!enrollments || enrollments.length === 0){
-            return res.status(404).json({ message: "No pending enrollments found for this student" });
-        }
-        
+  try {
+    const { student } = req.params;
+    const enrollments = await Enrollment.find({ student: student, status: "pending" });
 
-        await Enrollment.updateMany(
-            { student: student, status: "pending" },
-            { status: "accepted" }
-        );
-        const addtoliststudent = await Student.findById(req.params.student);
-        addtoliststudent.courses.push(...enrollments.map(enrollment => enrollment.course));
-        await addtoliststudent.save();
-          
-        
-        const updated = await Enrollment.find({ student: student, status: "accepted" });
-        
-        res.status(200).json({
-            status: "success",
-            data: { enrollments: updated },
-        });
-    } catch(error){
-        res.status(500).json({ message: "Error managing enrollments", error: error.message });
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(404).json({ message: "No pending enrollments found for this student" });
     }
+
+
+    await Enrollment.updateMany(
+      { student: student, status: "pending" },
+      { status: "accepted" }
+    );
+    const addtoliststudent = await Student.findById(req.params.student);
+    addtoliststudent.courses.push(...enrollments.map(enrollment => enrollment.course));
+    await addtoliststudent.save();
+
+
+    const updated = await Enrollment.find({ student: student, status: "accepted" });
+
+    res.status(200).json({
+      status: "success",
+      data: { enrollments: updated },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error managing enrollments", error: error.message });
+  }
 }
 
 const rejectEnrollments = async (req, res) => {
-    try{
-        const { student } = req.params;
-        const enrollments = await Enrollment.find({ student: student, status: "pending" });
-        
-        if(!enrollments || enrollments.length === 0){
-            return res.status(404).json({ message: "No pending enrollments found for this student" });
-        }
-        
-        // Update all pending enrollments to failed
-        await Enrollment.updateMany(
-            { student: student, status: "pending" },
-            { status: "failed" }
-        );
-        
-        const updated = await Enrollment.find({ student: student, status: "failed" });
-        
-        res.status(200).json({
-            status: "success",
-            data: { enrollments: updated },
-        });
-    } catch(error){
-        res.status(500).json({ message: "Error managing enrollments", error: error.message });
+  try {
+    const { student } = req.params;
+    const enrollments = await Enrollment.find({ student: student, status: "pending" });
+
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(404).json({ message: "No pending enrollments found for this student" });
     }
+
+    // Update all pending enrollments to failed
+    await Enrollment.updateMany(
+      { student: student, status: "pending" },
+      { status: "failed" }
+    );
+
+    const updated = await Enrollment.find({ student: student, status: "failed" });
+
+    res.status(200).json({
+      status: "success",
+      data: { enrollments: updated },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error managing enrollments", error: error.message });
+  }
 };
 //=======================================================================================
 
@@ -587,19 +599,19 @@ const rejectEnrollments = async (req, res) => {
 // Retrieving all students records
 
 const getStudents = async (req, res) => {
-    try {
-        const students = await adminService.getallStudents();
-        res.status(200).json({
-            status: "success",
-            results: students.length,
-            data: students
-        });
-    }
-    catch (error) {
-        res.status(500).json({ message: "Failed to retrieve students", error: error.message });
-    }   
+  try {
+    const students = await adminService.getallStudents();
+    res.status(200).json({
+      status: "success",
+      results: students.length,
+      data: students
+    });
+  }
+  catch (error) {
+    res.status(500).json({ message: "Failed to retrieve students", error: error.message });
+  }
 };
 
 module.exports = {
-    getCourses,updateTimeSlot,deleteTimeSlot,addTimeSlot,createClassroom,getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor , acceptEnrollments , rejectEnrollments , getStudents
+  getCourses, updateTimeSlot, deleteTimeSlot, addTimeSlot, createClassroom, getClassrooms, updateClassroom, deleteClassroom, createCourse, deleteCourse, getClassroomStatus, assignClassroom, unassignClassroom, updateCourse, assignCourseToDoctor, unassignCourseFromDoctor, acceptEnrollments, rejectEnrollments, getStudents
 }
