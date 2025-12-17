@@ -6,6 +6,7 @@ const JWT = require("jsonwebtoken");
 const ClassroomValue = require("../EAV models/classroom_value");
 const ClassroomAttribute = require("../EAV models/classroom_attribute");
 const ClassroomEntity = require("../EAV models/classroom_entity");
+const pool = require("../Db_config/DB");
 
 let attributesInitialized = false;
 
@@ -36,7 +37,8 @@ const initializeAttributes = async () => {
 
         const timeslot = await ClassroomAttribute.getAttributeByName("timeslot");
         if(!timeslot){
-            await ClassroomAttribute.createClassroomAttribute("timeslot","string")
+            await ClassroomAttribute.createClassroomAttribute("timeslot","string");
+            console.log("Created timeslot attribute");
         }   
         attributesInitialized = true;
         console.log("Classroom attributes initialized");
@@ -52,40 +54,37 @@ const adminService = {
       await initializeAttributes();
       const { roomName, capacity, type, isworking, timeslots } = classroomData;
 
-      if (!roomName || capacity == null || !type) {
-        throw new Error("Important fields are required");
-      }
-
-      // Create classroom entity
       const classroomEntityId = await ClassroomEntity.createClassroom("classroom", roomName);
 
-      // Get attribute IDs
       const roomNameAttr = await ClassroomAttribute.getAttributeByName("roomName");
       const capacityAttr = await ClassroomAttribute.getAttributeByName("capacity");
       const typeAttr = await ClassroomAttribute.getAttributeByName("type");
       const isworkingAttr = await ClassroomAttribute.getAttributeByName("isworking");
       const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
 
-      // Store values
+      // Basic Attributes
       await ClassroomValue.createClassroomValue(classroomEntityId, roomNameAttr.attribute_id, { value_string: roomName });
       await ClassroomValue.createClassroomValue(classroomEntityId, capacityAttr.attribute_id, { value_number: capacity });
       await ClassroomValue.createClassroomValue(classroomEntityId, typeAttr.attribute_id, { value_string: type });
       await ClassroomValue.createClassroomValue(classroomEntityId, isworkingAttr.attribute_id, { value_string: isworking });
 
-      // Store each timeslot as a separate row
+      // Store Timeslots (Corrected loop and stringify)
       if (Array.isArray(timeslots)) {
         for (let i = 1; i < timeslots.length; i++) {
           await ClassroomValue.createClassroomValue(
             classroomEntityId,
             timeslotAttr.attribute_id,
-            { value_string: timeslots[i], array_index: i }
+            {
+              value_string: JSON.stringify(timeslots[i]),
+              array_index: i
+            }
           );
         }
       }
 
       return { success: true, id: classroomEntityId, message: "Classroom created successfully" };
     } catch (error) {
-      return { success: false, message: "Error creating classroom: " + error.message };
+      return { success: false, message: error.message };
     }
   },
 
@@ -211,7 +210,33 @@ getallStudents: async ()=>{
     }catch(error){
         return {success : false , message : "Error getting students: "+ error.message};
     }
-}
+},
+addTimeSlot: async (roomId, timeSlot) => {
+    try {
+      await initializeAttributes();
+      const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
 
+      // Find next index
+      const [rows] = await pool.query(
+        "SELECT MAX(array_index) AS maxIndex FROM classroom_entity_attribute WHERE entity_id = ? AND attribute_id = ?",
+        [roomId, timeslotAttr.attribute_id]
+      );
+
+      const nextIndex = (rows[0].maxIndex !== null) ? rows[0].maxIndex + 1 : 0;
+
+      await ClassroomValue.createClassroomValue(
+        roomId,
+        timeslotAttr.attribute_id,
+        {
+          value_string: JSON.stringify(timeSlot),
+          array_index: nextIndex
+        }
+      );
+
+      return { success: true };
+    } catch (error) {
+      throw error;
+    }
+  }
 };
 module.exports = adminService;

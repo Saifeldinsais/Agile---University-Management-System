@@ -5,7 +5,7 @@ const adminController = require('../Controllers/admin.controller');
 // router.post("/signupAdmin",adminController.signUp);   // used one time to create admin in database 
 
 
-router.post("/classrooms/:roomId/timeslots", adminController.addTimeSlot);
+router.post("/classrooms/:roomId/timeslots", adminController.addTimeSlot); // DONE EAV MODEL
 router.patch("/classrooms/:roomId/timeslots/:slotId", adminController.updateTimeSlot);
 router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTimeSlot);
 

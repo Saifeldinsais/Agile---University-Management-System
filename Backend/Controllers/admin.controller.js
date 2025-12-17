@@ -5,8 +5,9 @@ const JWT = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const Enrollment = require("../Models/enrollment.model")
 const Student = require("../Models/student.model");
-
 const adminService = require("../Services/admin.service");
+const ClassroomAttribute = require("../EAV models/classroom_attribute");
+const ClassroomValue = require("../EAV models/classroom_value");
 const createClassroom = async (req, res) => {
   try {
     const { roomName, capacity, type, isworking, timeslots } = req.body;
@@ -19,12 +20,23 @@ const createClassroom = async (req, res) => {
       });
     }
 
-    // Optional: check timeslots is an array if provided
-    if (timeslots && !Array.isArray(timeslots)) {
-      return res.status(400).json({
-        status: "fail",
-        message: "timeslots must be an array of strings",
-      });
+    if (timeslots) {
+      if (!Array.isArray(timeslots)) {
+        return res.status(400).json({
+          status: "fail",
+          message: "timeslots must be an array",
+        });
+      }
+
+      for (const slot of timeslots) {
+        const { day, start, end } = slot;
+        if (!day || !start || !end ) {
+          return res.status(400).json({
+            status: "fail",
+            message: "Each timeslot must have day, start and  end",
+          });
+        }
+      }
     }
 
     // Check for existing classroom
@@ -36,13 +48,13 @@ const createClassroom = async (req, res) => {
       });
     }
 
-    // Create classroom (pass timeslots array directly)
+    // Create classroom
     const result = await adminService.createClassroom({
       roomName,
       capacity,
       type,
       isworking,
-      timeslots, // can be undefined or array
+      timeslots, // array of objects
     });
 
     if (!result.success) {
@@ -56,7 +68,6 @@ const createClassroom = async (req, res) => {
       status: "success",
       data: {
         classroom: {
-          id: result.id,
           roomName,
           capacity,
           type,
@@ -153,7 +164,7 @@ const deleteClassroom = async (req, res) => {
     }
 }
 
-const getClassroomStatus = async (req, res) => {
+const getClassroomStatus = async (req, res) => { // Lessa
     try {
         const classroom = await Classroom.findById(req.params.id)
 
@@ -418,43 +429,69 @@ const unassignCourseFromDoctor = async (req, res) => {
 const addTimeSlot = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { day, start, end, doctorEmail } = req.body;
+    const { day, start, end } = req.body;
 
-    if (!day || !start || !end || !doctorEmail) {
+    if (!day || !start || !end ) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const classroom = await Classroom.findById(roomId);
+    // 1. Check if classroom exists
+    const classroom = await adminService.getClassroomById(roomId);
     if (!classroom) {
       return res.status(404).json({ message: "Classroom not found" });
     }
 
-    // prevent overlapping in same day
-    const conflict = classroom.timeSlots.some((slot) => {
+    // 2. Get the attribute ID for 'timeslot'
+    const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
+    
+    // 3. Fetch existing slots to check for overlaps
+    const existingValues = await ClassroomValue.getAllClassroomValues(
+      roomId,
+      timeslotAttr.attribute_id
+    );
+
+    const existingSlots = existingValues.map(v => {
+        try {
+            return typeof v.value_string === 'string' ? JSON.parse(v.value_string) : v.value_string;
+        } catch (e) {
+            return null;
+        }
+    }).filter(slot => slot !== null);
+
+    // 4. Conflict Logic: Same day AND overlapping time
+    const conflict = existingSlots.some(slot => {
       if (slot.day !== day) return false;
-      // if new range overlaps existing
-      return !(end <= slot.start || start >= slot.end);
+      // Overlap if: (StartA < EndB) AND (EndA > StartB)
+      return (start < slot.end && end > slot.start);
     });
 
     if (conflict) {
-      return res
-        .status(400)
-        .json({ message: "Time slot conflicts with existing schedule" });
+      return res.status(400).json({
+        message: "Time slot conflicts with existing schedule"
+      });
     }
 
-    classroom.timeSlots.push({ day, start, end, doctorEmail });
-    await classroom.save();
+    // 5. Save to database via service
+    const result = await adminService.addTimeSlot(roomId, {
+      day,
+      start,
+      end
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
 
     res.status(201).json({
       status: "success",
-      data: { classroom },
+      message: "Time slot added successfully"
     });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error adding time slot" });
   }
 };
-
 // Edit (update) time slot
 const updateTimeSlot = async (req, res) => {
   try {

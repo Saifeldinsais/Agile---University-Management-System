@@ -4,7 +4,7 @@ const Attribute = {
   // Create a new attribute
   create: async (attribute_name, data_type) => {    
     const [result] = await pool.query(
-      "INSERT INTO Attributes (attribute_name, data_type) VALUES (?, ?)",
+      "INSERT INTO attributes (attribute_name, data_type) VALUES (?, ?)",
       [attribute_name, data_type]
     );
     return result.insertId;
