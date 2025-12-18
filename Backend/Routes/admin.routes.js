@@ -49,7 +49,7 @@ router.route('/courses/:id/doctor')
 
 
 //==================== enrollment requests ====================
-router.patch('/enrollments/:student/accept', adminController.acceptEnrollments);
+router.patch('/enrollments/:student/accept', adminController.acceptEnrollments); // DONE EAV MODEL
 router.patch('/enrollments/:student/reject', adminController.rejectEnrollments);
 
 //==================== get students ====================

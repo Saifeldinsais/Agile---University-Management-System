@@ -10,6 +10,11 @@ const UserEntity = require("../EAV models/user_entity");
 const UserAttribute = require("../EAV models/user_attribute");
 const UserValue = require("../EAV models/user_value");
 
+const EnrollmentEntity = require("../EAV models/enrollment_entity");
+const EnrollmentAttribute = require("../EAV models/enrollment_attribute");
+const EnrollmentValue = require("../EAV models/enrollment_value");
+
+
 const pool = require("../Db_config/DB");
 
 let attributesInitialized = false;
@@ -540,43 +545,84 @@ const adminService = {
   },
 
   // ================= ENROLLMENTS =================
-  acceptEnrollments: async (studentId) => {
+// Add this to your EnrollmentService or adminService
+acceptEnrollments: async (studentId) => {
     try {
-      await initializeAttributes();
-      // Update status in enrollments table
-      const [result] = await pool.query(
-        "UPDATE enrollments SET status = 'accepted' WHERE student_id = ? AND status = 'pending'",
-        [studentId]
-      );
+        await initializeAttributes(); 
+        const studentAttr = await EnrollmentAttribute.getAttributeByName("studentId");
+        const statusAttr = await EnrollmentAttribute.getAttributeByName("status");
 
-      // Fetch updated
-      const [rows] = await pool.query(
-        "SELECT * FROM enrollments WHERE student_id = ? AND status = 'accepted'",
-        [studentId]
-      );
+        const [studentEnrollments] = await pool.query(
+            `SELECT entity_id FROM enrollment_entity_attribute 
+             WHERE attribute_id = ? `,
+            [studentAttr.attribute_id, studentId]
+        );  
 
-      return { success: true, data: rows };
+        let updatedRows = [];
+
+
+        for (const enrollment of studentEnrollments) {
+            const enrId = enrollment.entity_id;
+            
+
+            const statusRecord = await EnrollmentValue.getEnrollmentValue(enrId, statusAttr.attribute_id);
+
+            if (statusRecord && statusRecord.value_string === "pending") {
+
+                await EnrollmentValue.updateEnrollmentValue(statusRecord.value_id, {
+                    value_string: "enrolled"
+                });
+     
+                const updated = await EnrollmentValue.getEnrollmentValue(enrId, statusAttr.attribute_id);
+                updatedRows.push(updated);
+            }
+        }
+
+        return { success: true, data: updatedRows };
+
     } catch (error) {
-      return { success: false, message: error.message };
+        console.error("Service Error:", error.message);
+        return { success: false, message: error.message };
     }
-  },
+},
 
   rejectEnrollments: async (studentId) => {
-    try {
-      await initializeAttributes();
-      // Update status in enrollments table
-      await pool.query(
-        "UPDATE enrollments SET status = 'failed' WHERE student_id = ? AND status = 'pending'",
-        [studentId]
-      );
-      // Fetch updated
-      const [rows] = await pool.query(
-        "SELECT * FROM enrollments WHERE student_id = ? AND status = 'failed'",
-        [studentId]
-      );
-      return { success: true, data: rows };
+        try {
+        await initializeAttributes(); 
+        const studentAttr = await EnrollmentAttribute.getAttributeByName("studentId");
+        const statusAttr = await EnrollmentAttribute.getAttributeByName("status");
+
+        const [studentEnrollments] = await pool.query(
+            `SELECT entity_id FROM enrollment_entity_attribute 
+             WHERE attribute_id = ? `,
+            [studentAttr.attribute_id, studentId]
+        );  
+
+        let updatedRows = [];
+
+
+        for (const enrollment of studentEnrollments) {
+            const enrId = enrollment.entity_id;
+            
+
+            const statusRecord = await EnrollmentValue.getEnrollmentValue(enrId, statusAttr.attribute_id);
+
+            if (statusRecord && statusRecord.value_string === "pending") {
+
+                await EnrollmentValue.updateEnrollmentValue(statusRecord.value_id, {
+                    value_string: "rejected"
+                });
+     
+                const updated = await EnrollmentValue.getEnrollmentValue(enrId, statusAttr.attribute_id);
+                updatedRows.push(updated);
+            }
+        }
+
+        return { success: true, data: updatedRows };
+
     } catch (error) {
-      return { success: false, message: error.message };
+        console.error("Service Error:", error.message);
+        return { success: false, message: error.message };
     }
   },
 

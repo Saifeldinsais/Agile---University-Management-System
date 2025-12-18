@@ -25,11 +25,11 @@ const EnrollmentService = {
   createEnrollment: async ({ studentId, courseId, status = "pending" }) => {
     await initEnrollmentAttrs();
 
-    // منع duplicate enrollment: نفس student + course
+
     const studentAttr = await EnrollmentAttribute.getAttributeByName("studentId");
     const courseAttr = await EnrollmentAttribute.getAttributeByName("courseId");
 
-    // find existing by joining values (EAV)
+
     const [exists] = await pool.query(
       `SELECT ee.entity_id
        FROM enrollment_entity ee

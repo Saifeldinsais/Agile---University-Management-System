@@ -363,28 +363,27 @@ const deleteTimeSlot = async (req, res) => {
 
 const acceptEnrollments = async (req, res) => {
   try {
-    const { student } = req.params;
+
+    const { student } = req.params; 
     const result = await adminService.acceptEnrollments(student);
 
     if (!result.success) {
       return res.status(500).json({ message: "Error managing enrollments", error: result.message });
     }
 
-    // Check if any updated?
     if (!result.data || result.data.length === 0) {
-
       return res.status(404).json({ message: "No pending enrollments found for this student" });
     }
 
     res.status(200).json({
       status: "success",
+      message: `Successfully accepted ${result.data.length} enrollment(s)`,
       data: { enrollments: result.data },
     });
   } catch (error) {
     res.status(500).json({ message: "Error managing enrollments", error: error.message });
   }
 };
-
 const rejectEnrollments = async (req, res) => {
   try {
     const { student } = req.params;
