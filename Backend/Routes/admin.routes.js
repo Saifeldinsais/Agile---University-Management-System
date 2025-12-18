@@ -23,15 +23,7 @@ router.route('/classrooms/:id')
 .get(adminController.getClassroomStatus) // DONE EAV MODEL
 
 //==================== courses =====================  
-// router
-//   .route("/courses")
-//   .post(adminController.createCourse)
-//   .get(adminController.getCourses);
 
-// router
-//   .route("/courses/:id")
-//   .delete(adminController.deleteCourse)
-//   .patch(adminController.updateCourse);
 router.post("/courses", courseController.createCourse); // DONE EAV MODEL
 router.get("/courses", courseController.getCourses); // DONE EAV MODEL
 router.patch("/courses/:id", courseController.updateCourse);  // DONE EAV MODEL
@@ -43,14 +35,14 @@ router.route('/classroom/:id/assign')
 .post(adminController.assignClassroom)
 .delete(adminController.unassignClassroom)
 
-router.route('/courses/:id/doctor')
-.post(adminController.assignCourseToDoctor)
-.delete(adminController.unassignCourseFromDoctor)
+router.route('/courses/:courseId/doctor')
+.post(adminController.assignCourseToDoctor) // DONE EAV MODEL
+.delete(adminController.unassignCourseFromDoctor) // DONE EAV MODEL
 
 
 //==================== enrollment requests ====================
 router.patch('/enrollments/:student/accept', adminController.acceptEnrollments); // DONE EAV MODEL
-router.patch('/enrollments/:student/reject', adminController.rejectEnrollments);
+router.patch('/enrollments/:student/reject', adminController.rejectEnrollments); // DONE EAV MODEL
 
 //==================== get students ====================
 router.get('/students', adminController.getStudents); // DONE EAV MODEL

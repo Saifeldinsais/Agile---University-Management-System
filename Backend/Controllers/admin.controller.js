@@ -225,30 +225,39 @@ const unassignClassroom = async (req, res) => {
 
 const assignCourseToDoctor = async (req, res) => {
   try {
-    const courseId = req.params.id;
+    const { courseId } = req.params;
     const { doctorId } = req.body;
 
     if (!courseId || !doctorId) {
-      return res.status(400).json({ status: "fail", message: "course ID and Doctor Id is required" });
+      return res.status(400).json({
+        status: "fail",
+        message: "course ID and Doctor Id is required"
+      });
     }
 
     const result = await adminService.assignCourseToDoctor(courseId, doctorId);
 
     if (!result.success) {
-      // Maybe doctor or course not found? Service handles this via errors mostly, or robust checks.
-      return res.status(400).json({ status: "fail", message: result.message });
+      return res.status(400).json({
+        status: "fail",
+        message: result.message
+      });
     }
 
-    res.status(200).json({ status: "success", message: "Course assigned to doctor" });
+    res.status(200).json({
+      status: "success",
+      message: "Course assigned to doctor"
+    });
 
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
 };
 
+
 const unassignCourseFromDoctor = async (req, res) => {
   try {
-    const courseId = req.params.id;
+    const {courseId} = req.params;
     const { doctorId } = req.body;
 
     if (!courseId || !doctorId) {

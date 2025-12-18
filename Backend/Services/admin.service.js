@@ -57,39 +57,9 @@ const initializeAttributes = async () => {
 
     const courseDept = await CourseAttribute.getAttributeByName("department");
     if (!courseDept) await CourseAttribute.createCourseAttribute("department", "string");
-
-
-    // --- User Attributes (for Doctor/Student) ---
-    // We use the generic 'attributes' table for UserEntity
-    try {
-      const assignedCourseAttr = await UserAttribute.getAttributeByName("assigned_course");
-      if (!assignedCourseAttr) {
-        // Only create if not exists, verify type matches schema or use generic 'int'/'string'
-        // await UserAttribute.create("assigned_course", "int"); 
-      }
-    } catch (e) { /* ignore or log */ }
-
-    // --- Enrollments Table (Raw SQL for Many-to-Many with attributes) ---
-    await pool.query(`
-            CREATE TABLE IF NOT EXISTS enrollments (
-                enrollment_id INT AUTO_INCREMENT PRIMARY KEY,
-                student_id INT NOT NULL,
-                course_id INT NOT NULL,
-                status VARCHAR(50) DEFAULT 'pending',
-                grade DECIMAL(5,2) DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-    // Ensure Classroom Attributes
-    try {
-      const reqAttr = await ClassroomAttribute.getAttributeByName("classroom_requests");
-      if (!reqAttr) {
-        await ClassroomAttribute.createClassroomAttribute("classroom_requests", "string");
-        console.log("Created classroom_requests attribute");
-      }
-    } catch (e) { /* ignore */ }
-
+    // --- User Attributes ---
+    const assignedCourse = await UserAttribute.getAttributeByName("assigned_course");
+    if (!assignedCourse) await UserAttribute.create("assigned_course", "decimal");
     attributesInitialized = true;
     console.log("All attributes and tables initialized");
   } catch (error) {
@@ -512,11 +482,12 @@ const adminService = {
     try {
       await initializeAttributes();
       const attr = await UserAttribute.getAttributeByName("assigned_course");
-
+      if (!attr) {
+        throw new Error("assigned_course attribute not initialized");
+      }
       // Check if already assigned
       const existing = await UserValue.getArrayValues(doctorId, attr.attribute_id);
-      const isAssigned = existing.some(v => v.value_reference == courseId); // fuzzy check for number/string
-
+      const isAssigned = existing.some(v => v.value_reference == courseId);
       if (isAssigned) return { success: true }; // Already assigned
 
       await UserValue.createValue(doctorId, attr.attribute_id, {
@@ -530,16 +501,17 @@ const adminService = {
 
   unassignCourseFromDoctor: async (courseId, doctorId) => {
     try {
-      await initializeAttributes();
+      await initializeAttributes();;
       const attr = await UserAttribute.getAttributeByName("assigned_course");
+      if (!attr) {
+        throw new Error("assigned_course attribute not initialized");
+      }
       const existing = await UserValue.getArrayValues(doctorId, attr.attribute_id);
-      const target = existing.find(v => v.value_reference == courseId);
-
-      if (!target) return { success: false, message: "Course not assigned to this doctor" };
-
-      await UserValue.deleteValue(target.value_id);
+      const toDelete = existing.find(v => v.value_reference == courseId);
+      if (!toDelete) return { success: true }; // Not assigned
+      await UserValue.deleteValue(toDelete.value_id);
       return { success: true };
-    } catch (error) {
+      } catch (error) {
       return { success: false, message: error.message };
     }
   },
