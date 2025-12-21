@@ -24,6 +24,8 @@ const signUp = async (req, res) => {
         let type = "student";
         if (email.toLowerCase().includes("@ums-doctor")) {
             type = "doctor";
+        } else if (email.toLowerCase().includes("@ums-ta")) {
+            type = "ta";
         } else if (email.toLowerCase().includes("@ums-student")) {
             type = "student";
         } else {
@@ -82,6 +84,8 @@ const signIn = async (req, res) => {
             type = "doctor";
         } else if (email.toLowerCase().includes("@admin")) {
             type = "admin";
+        } else if (email.toLowerCase().includes("@ums-ta")) {
+            type = "ta";
         } else if (email.toLowerCase().includes("@ums-student")) {
             type = "student";
         } else {

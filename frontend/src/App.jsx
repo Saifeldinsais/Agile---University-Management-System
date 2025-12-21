@@ -24,6 +24,10 @@ import DoctorHome from "./pages/doctor/Home";
 
 import AdminCurriculum from "./pages/admin/AdminCurriculum";
 
+import TADashboard from "./pages/ta/TADashboard";
+
+import AdvisorDashboard from "./pages/advisor/AdvisorDashboard";
+
 
 function App() {
   return (
@@ -62,6 +66,12 @@ function App() {
         <Route path="grades" element={<NotImplemented />} />
       </Route>
 
+      {/* TA (Teaching Assistant) PAGES */}
+      <Route path="/ta/dashboard" element={<TADashboard />} />
+
+      {/* Advisor PAGES */}
+      <Route path="/advisor/dashboard" element={<AdvisorDashboard />} />
+
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -69,3 +79,4 @@ function App() {
 }
 
 export default App;
+
