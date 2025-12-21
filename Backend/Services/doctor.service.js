@@ -64,7 +64,7 @@ const doctorService = {
       await ClassroomValue.createClassroomValue(classroomId, requestAttr.attribute_id, {
         value_string: JSON.stringify(requestData),
         value_number: 0, // 0 for pending status of the request itself
-        value_reference: null 
+        value_reference: null
       });
 
       return { success: true, message: "Booking request sent to admin for approval" };
@@ -73,7 +73,16 @@ const doctorService = {
       console.error("Error in bookClassroomRequest:", error);
       return { success: false, message: "Internal server error: " + error.message };
     }
-  }
+  },
+
+  getDoctorByEmail: async (email) => {
+    const [rows] = await pool.query(
+      "SELECT id, email FROM users WHERE email = ? AND role = 'doctor'",
+      [email]
+    );
+    return rows[0];
+  },
+  
 };
 
 module.exports = doctorService;
