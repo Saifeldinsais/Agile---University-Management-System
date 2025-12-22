@@ -161,6 +161,18 @@ const enrollCourse = async (req, res) => {
       [enrollmentId, gradeAttrId, null]
     );
 
+    // Emit real-time event for admin dashboard
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin").emit("enrollment-created", {
+        id: enrollmentId,
+        studentId: Number(studentId),
+        courseId: Number(courseId),
+        status: "PENDING",
+        createdAt: new Date().toISOString()
+      });
+    }
+
     return res.status(201).json({
       message: "Student enrolled successfully",
       enrollment: {
