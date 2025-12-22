@@ -203,7 +203,9 @@ const viewEnrolled = async (req, res) => {
         vGrade.value_number AS grade,
 
         MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
-        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code
+        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
+        MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department,
+        MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits
 
       FROM enrollment_entity ee
       JOIN enrollment_entity_attribute vStudent

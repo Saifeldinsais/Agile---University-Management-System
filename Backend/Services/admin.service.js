@@ -503,41 +503,61 @@ const adminService = {
   },
 
   // ================= ASSIGNMENT (User <-> Course) =================
-  assignCourseToDoctor: async (courseId, doctorId) => {
-    try {
-      await initializeAttributes();
-      const attr = await UserAttribute.getAttributeByName("assigned_course");
-
-      // Check if already assigned
-      const existing = await UserValue.getArrayValues(doctorId, attr.attribute_id);
-      const isAssigned = existing.some(v => v.value_reference == courseId); // fuzzy check for number/string
-
-      if (isAssigned) return { success: true }; // Already assigned
-
-      await UserValue.createValue(doctorId, attr.attribute_id, {
-        value_reference: courseId
-      });
-      return { success: true };
-    } catch (error) {
-      return { success: false, message: error.message };
+ assignCourseToDoctor: async (courseId, doctorId) => {
+  try {
+    const instructorAttr = await CourseAttribute.getAttributeByName("instructor_id");
+    if (!instructorAttr) {
+      return { success: false, message: "Course attribute instructor_id not found" };
     }
-  },
 
-  unassignCourseFromDoctor: async (courseId, doctorId) => {
-    try {
-      await initializeAttributes();
-      const attr = await UserAttribute.getAttributeByName("assigned_course");
-      const existing = await UserValue.getArrayValues(doctorId, attr.attribute_id);
-      const target = existing.find(v => v.value_reference == courseId);
+    const [existing] = await pool.query(
+      `SELECT value_id FROM course_entity_attribute
+       WHERE entity_id=? AND attribute_id=? LIMIT 1`,
+      [courseId, instructorAttr.attribute_id]
+    );
 
-      if (!target) return { success: false, message: "Course not assigned to this doctor" };
-
-      await UserValue.deleteValue(target.value_id);
-      return { success: true };
-    } catch (error) {
-      return { success: false, message: error.message };
+    if (existing.length > 0) {
+      await pool.query(
+        `UPDATE course_entity_attribute
+         SET value_number=?
+         WHERE value_id=?`,
+        [doctorId, existing[0].value_id]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO course_entity_attribute (entity_id, attribute_id, value_number)
+         VALUES (?, ?, ?)`,
+        [courseId, instructorAttr.attribute_id, doctorId]
+      );
     }
-  },
+
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
+},
+
+unassignCourseFromDoctor: async (courseId, doctorId) => {
+  try {
+    await initializeAttributes();
+
+    const attr = await UserAttribute.getAttributeByName("assigned_course");
+    if (!attr) {
+      return { success: false, message: "User attribute 'assigned_course' not found. Create it in initializeAttributes()." };
+    }
+
+    const existing = await UserValue.getArrayValues(doctorId, attr.attribute_id);
+    const target = existing.find(v => String(v.value_reference) === String(courseId));
+
+    if (!target) return { success: false, message: "Course not assigned to this doctor" };
+
+    await UserValue.deleteValue(target.value_id);
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+},
+
 
   // ================= ENROLLMENTS =================
   acceptEnrollments: async (studentId) => {
