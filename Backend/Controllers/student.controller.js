@@ -161,6 +161,18 @@ const enrollCourse = async (req, res) => {
       [enrollmentId, gradeAttrId, null]
     );
 
+    // Emit real-time event for admin dashboard
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin").emit("enrollment-created", {
+        id: enrollmentId,
+        studentId: Number(studentId),
+        courseId: Number(courseId),
+        status: "PENDING",
+        createdAt: new Date().toISOString()
+      });
+    }
+
     return res.status(201).json({
       message: "Student enrolled successfully",
       enrollment: {
@@ -277,6 +289,18 @@ const dropCourse = async (req, res) => {
     }
 
     await upsertEnrollmentValueString(enrollmentId, statusAttrId, "drop");
+
+    // Emit real-time event for admin dashboard
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin").emit("enrollment-drop-requested", {
+        enrollmentId,
+        studentId: Number(studentId),
+        courseId: Number(courseId),
+        status: "DROP",
+        requestedAt: new Date().toISOString()
+      });
+    }
 
     return res.status(200).json({
       message: "Course status updated to dropped",
