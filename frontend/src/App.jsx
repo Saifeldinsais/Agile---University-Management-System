@@ -19,6 +19,8 @@ import AdminFacilities from "./pages/admin/AdminFacilities";
 
 import StudentDashboard from "./pages/student/Dashboard";
 import StudentHome from "./pages/student/Home";
+import ElectiveSelection from "./pages/student/ElectiveSelection/ElectiveSelection";
+import Timetable from "./pages/student/Timetable/Timetable";
 
 import DoctorHome from "./pages/doctor/Home";
 
@@ -55,6 +57,8 @@ function App() {
       <Route path="student" element={<StudentLayout />} >
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="facilities" element={<NotImplemented />} />
+        <Route path="electives" element={<ElectiveSelection />} />
+        <Route path="timetable" element={<Timetable />} />
         <Route index element={<StudentHome />} />
       </Route>
 

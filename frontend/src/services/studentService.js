@@ -26,6 +26,20 @@ const StudentService = {
       courseId,
     });
   },
+
+  getAvailableElectives: () => {
+    return apiClient.get("/student/electives");
+  },
+
+  selectElective: (courseId) => {
+    return apiClient.post("/student/selectElective", {
+      courseId,
+    });
+  },
+
+  getTimetable: () => {
+    return apiClient.get("/student/timetable");
+  },
 };
 
 export default StudentService;

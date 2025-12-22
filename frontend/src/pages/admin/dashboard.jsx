@@ -94,10 +94,10 @@ function Dashboard() {
             Curriculum
           </button>
 
-          <button className="menu-item" onClick={() => alert("Staff soon")}>
+          <button className="menu-item" onClick={() => alert("Staff soon")}> 
             Staff
           </button>
-          <button className="menu-item" onClick={() => alert("Community soon")}>
+          <button className="menu-item" onClick={() => alert("Community soon")}> 
             Community
           </button>
         </nav>

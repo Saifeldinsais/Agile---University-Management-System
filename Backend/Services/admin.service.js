@@ -540,22 +540,46 @@ const adminService = {
   },
 
   // ================= ENROLLMENTS =================
+
+  getPendingEnrollments: async () => {
+    try {
+      const statusAttr = await require("../EAV models/enrollment_attribute").getAttributeByName("status");
+      const studentAttr = await require("../EAV models/enrollment_attribute").getAttributeByName("studentId");
+      const courseAttr = await require("../EAV models/enrollment_attribute").getAttributeByName("courseId");
+      const [rows] = await pool.query(
+        `SELECT ee.entity_id, v1.value_reference AS studentId, v2.value_reference AS courseId
+         FROM enrollment_entity ee
+         JOIN enrollment_entity_attribute v1 ON v1.entity_id = ee.entity_id AND v1.attribute_id = ?
+         JOIN enrollment_entity_attribute v2 ON v2.entity_id = ee.entity_id AND v2.attribute_id = ?
+         JOIN enrollment_entity_attribute vs ON vs.entity_id = ee.entity_id AND vs.attribute_id = ? AND vs.value_string = 'pending'`,
+        [studentAttr.attribute_id, courseAttr.attribute_id, statusAttr.attribute_id]
+      );
+      return { success: true, data: rows };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+
   acceptEnrollments: async (studentId) => {
     try {
-      await initializeAttributes();
-      // Update status in enrollments table
-      const [result] = await pool.query(
-        "UPDATE enrollments SET status = 'accepted' WHERE student_id = ? AND status = 'pending'",
-        [studentId]
+      const statusAttr = await require("../EAV models/enrollment_attribute").getAttributeByName("status");
+      const studentAttr = await require("../EAV models/enrollment_attribute").getAttributeByName("studentId");
+      const [entities] = await pool.query(
+        `SELECT ee.entity_id
+         FROM enrollment_entity ee
+         JOIN enrollment_entity_attribute v ON v.entity_id = ee.entity_id AND v.attribute_id = ? AND v.value_reference = ?`,
+        [studentAttr.attribute_id, studentId]
       );
-
-      // Fetch updated
-      const [rows] = await pool.query(
-        "SELECT * FROM enrollments WHERE student_id = ? AND status = 'accepted'",
-        [studentId]
-      );
-
-      return { success: true, data: rows };
+      let updated = [];
+      for (const row of entities) {
+        const enrId = row.entity_id;
+        const val = await require("../EAV models/enrollment_value").getEnrollmentValue(enrId, statusAttr.attribute_id);
+        if (val && val.value_string === "pending") {
+          await require("../EAV models/enrollment_value").updateEnrollmentValue(val.value_id, { value_string: "accepted" });
+          updated.push(enrId);
+        }
+      }
+      return { success: true, data: updated };
     } catch (error) {
       return { success: false, message: error.message };
     }
@@ -563,18 +587,24 @@ const adminService = {
 
   rejectEnrollments: async (studentId) => {
     try {
-      await initializeAttributes();
-      // Update status in enrollments table
-      await pool.query(
-        "UPDATE enrollments SET status = 'failed' WHERE student_id = ? AND status = 'pending'",
-        [studentId]
+      const statusAttr = await require("../EAV models/enrollment_attribute").getAttributeByName("status");
+      const studentAttr = await require("../EAV models/enrollment_attribute").getAttributeByName("studentId");
+      const [entities] = await pool.query(
+        `SELECT ee.entity_id
+         FROM enrollment_entity ee
+         JOIN enrollment_entity_attribute v ON v.entity_id = ee.entity_id AND v.attribute_id = ? AND v.value_reference = ?`,
+        [studentAttr.attribute_id, studentId]
       );
-      // Fetch updated
-      const [rows] = await pool.query(
-        "SELECT * FROM enrollments WHERE student_id = ? AND status = 'failed'",
-        [studentId]
-      );
-      return { success: true, data: rows };
+      let updated = [];
+      for (const row of entities) {
+        const enrId = row.entity_id;
+        const val = await require("../EAV models/enrollment_value").getEnrollmentValue(enrId, statusAttr.attribute_id);
+        if (val && val.value_string === "pending") {
+          await require("../EAV models/enrollment_value").updateEnrollmentValue(val.value_id, { value_string: "rejected" });
+          updated.push(enrId);
+        }
+      }
+      return { success: true, data: updated };
     } catch (error) {
       return { success: false, message: error.message };
     }

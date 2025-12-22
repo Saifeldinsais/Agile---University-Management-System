@@ -19,6 +19,12 @@ function NavBarLogged() {
         <NavLink to="/student/dashboard" className={linkClass}>
           Dashboard
         </NavLink>
+        <NavLink to="/student/electives" className={linkClass}>
+          Select Electives
+        </NavLink>
+        <NavLink to="/student/timetable" className={linkClass}>
+          Timetable
+        </NavLink>
       </nav>
       <div className="navbar-actions">
         
