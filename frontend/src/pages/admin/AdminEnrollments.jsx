@@ -10,6 +10,7 @@ const STATUS_COLORS = {
     APPROVED: { bg: "#d1fae5", color: "#065f46", label: "Approved" },
     REJECTED: { bg: "#fee2e2", color: "#991b1b", label: "Rejected" },
     CANCELLED: { bg: "#e5e7eb", color: "#374151", label: "Cancelled" },
+    DROP: { bg: "#fed7aa", color: "#c2410c", label: "Dropped" },
 };
 
 function StatusBadge({ status }) {
@@ -38,8 +39,8 @@ function Toast({ message, type, onClose }) {
         return () => clearTimeout(timer);
     }, [onClose]);
 
-    const bgColor = type === "error" ? "#fee2e2" : type === "success" ? "#d1fae5" : "#e0e7ff";
-    const textColor = type === "error" ? "#991b1b" : type === "success" ? "#065f46" : "#3730a3";
+    const bgColor = type === "error" ? "#fee2e2" : type === "success" ? "#d1fae5" : type === "warning" ? "#fef3c7" : "#e0e7ff";
+    const textColor = type === "error" ? "#991b1b" : type === "success" ? "#065f46" : type === "warning" ? "#92400e" : "#3730a3";
 
     return (
         <div
@@ -532,13 +533,23 @@ function AdminEnrollments() {
             showToast(`Enrollment ${data.action.toLowerCase()}d`, "success");
         };
 
+        // Listen for drop requests from students
+        const handleDropRequested = (data) => {
+            console.log("Drop request received:", data);
+            showToast("Student requested to drop a course!", "warning");
+            // Refetch to get complete data with updated status
+            loadEnrollments();
+        };
+
         socketService.on("enrollment-created", handleEnrollmentCreated);
         socketService.on("enrollment-updated", handleEnrollmentUpdated);
+        socketService.on("enrollment-drop-requested", handleDropRequested);
 
         // Cleanup on unmount
         return () => {
             socketService.off("enrollment-created", handleEnrollmentCreated);
             socketService.off("enrollment-updated", handleEnrollmentUpdated);
+            socketService.off("enrollment-drop-requested", handleDropRequested);
         };
     }, [loadEnrollments]);
 
@@ -898,6 +909,7 @@ function AdminEnrollments() {
                             <option value="PENDING">Pending</option>
                             <option value="APPROVED">Approved</option>
                             <option value="REJECTED">Rejected</option>
+                            <option value="DROP">Dropped</option>
                         </select>
 
                         <select
