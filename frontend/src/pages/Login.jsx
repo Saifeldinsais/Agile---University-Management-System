@@ -36,6 +36,8 @@ function Login() {
           userType = "student";
         } else if (emailLower.includes("@ums-doctor")) {
           userType = "doctor";
+        } else if (emailLower.includes("@ums-ta")) {
+          userType = "ta";
         }
       }
 
@@ -46,6 +48,8 @@ function Login() {
         navigate("/student/");
       } else if (userType === "doctor") {
         navigate("/doctor/");
+      } else if (userType === "ta") {
+        navigate("/ta/dashboard");
       } else {
         navigate("/");
       }

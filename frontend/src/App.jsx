@@ -15,6 +15,7 @@ import Signup from "./pages/Signup";
 
 import AdminDashboard from "./pages/admin/dashboard";
 import AdminFacilities from "./pages/admin/AdminFacilities";
+import AdminEnrollments from "./pages/admin/AdminEnrollments";
 
 
 import StudentDashboard from "./pages/student/Dashboard";
@@ -23,6 +24,10 @@ import StudentHome from "./pages/student/Home";
 import DoctorHome from "./pages/doctor/Home";
 
 import AdminCurriculum from "./pages/admin/AdminCurriculum";
+
+import TADashboard from "./pages/ta/TADashboard";
+
+import AdvisorDashboard from "./pages/advisor/AdvisorDashboard";
 
 
 function App() {
@@ -40,11 +45,8 @@ function App() {
       {/* ADMIN PAGES (no navbar, full admin layout) */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/facilities" element={<AdminFacilities />} />
-
-      {/* ADMIN PAGES (no navbar, full admin layout) */}
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-      <Route path="/admin/facilities" element={<AdminFacilities />} />
       <Route path="/admin/curriculum" element={<AdminCurriculum />} />
+      <Route path="/admin/enrollments" element={<AdminEnrollments />} />
 
 
       {/* Student PAGES */}
@@ -62,6 +64,12 @@ function App() {
         <Route path="grades" element={<NotImplemented />} />
       </Route>
 
+      {/* TA (Teaching Assistant) PAGES */}
+      <Route path="/ta/dashboard" element={<TADashboard />} />
+
+      {/* Advisor PAGES */}
+      <Route path="/advisor/dashboard" element={<AdvisorDashboard />} />
+
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -69,3 +77,4 @@ function App() {
 }
 
 export default App;
+

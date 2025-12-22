@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL } from "../../services/config";
 import StudentService from "../../services/studentService";
+import socketService from "../../services/socketService";
 import Course from "./Course/Course";
 import EnrolledCourse from "./EnrolledCourse/EnrolledCourse";
 
@@ -9,6 +10,7 @@ import styles from "./Dashboard.module.css";
 function Dashboard() {
 
   const [refreshEnrolled, setRefreshEnrolled] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   const [student, _setStudent] = useState(() => { //getStudent
     // Try 'user' first (new key), then 'student' (old key)
@@ -27,6 +29,40 @@ function Dashboard() {
   });
 
   const [courses, setCourses] = useState([]);
+
+  // Socket.io connection for real-time updates
+  useEffect(() => {
+    socketService.connect();
+    socketService.joinRoom("student");
+
+    // Listen for enrollment updates (admin approve/reject)
+    const handleEnrollmentUpdated = (data) => {
+      console.log("Enrollment status updated:", data);
+
+      // Update local enrolled courses
+      setEnrolled((prev) =>
+        prev.map((e) =>
+          e.enrollmentId === data.enrollmentId
+            ? { ...e, status: data.status.toLowerCase() }
+            : e
+        )
+      );
+
+      // Show notification
+      const message = data.action === "APPROVE"
+        ? "Your enrollment has been approved! 🎉"
+        : `Your enrollment was rejected. ${data.note ? `Reason: ${data.note}` : ''}`;
+
+      setNotification({ message, type: data.action === "APPROVE" ? "success" : "error" });
+      setTimeout(() => setNotification(null), 5000);
+    };
+
+    socketService.on("enrollment-updated", handleEnrollmentUpdated);
+
+    return () => {
+      socketService.off("enrollment-updated", handleEnrollmentUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -123,15 +159,40 @@ function Dashboard() {
     fetchEnrolled();
   }, [student, refreshEnrolled]);
 
-
+  // Compute available courses (filter out enrolled ones)
+  const availableCourses = useMemo(() => {
+    const enrolledCourseIds = enrolled.map(e => parseInt(e.courseId));
+    return courses.filter(course => !enrolledCourseIds.includes(parseInt(course._id)));
+  }, [courses, enrolled]);
 
   return (
     <>
+      {/* Real-time notification toast */}
+      {notification && (
+        <div style={{
+          position: 'fixed',
+          top: 20,
+          right: 20,
+          padding: '16px 24px',
+          borderRadius: 12,
+          backgroundColor: notification.type === 'success' ? '#d1fae5' : '#fee2e2',
+          color: notification.type === 'success' ? '#065f46' : '#991b1b',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          zIndex: 9999,
+          animation: 'slideIn 0.3s ease-out',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10
+        }}>
+          <span style={{ fontSize: 20 }}>{notification.type === 'success' ? '✓' : '✗'}</span>
+          <span>{notification.message}</span>
+        </div>
+      )}
 
       <h1>Courses Available</h1>
       <div className={styles.coursesContainer}>
-
-        {courses.map((e) => (
+        {/* Show available courses that aren't enrolled */}
+        {availableCourses.map((e) => (
           <Course
             title={e.title || "error"}
             code={e.code || "error"}
@@ -142,7 +203,15 @@ function Dashboard() {
             key={e._id}
           />
         ))}
+
+        {/* Empty state for available courses */}
+        {availableCourses.length === 0 && (
+          <p style={{ color: '#6b7280', padding: '20px', textAlign: 'center' }}>
+            {courses.length === 0 ? 'No courses available.' : 'You are enrolled in all available courses!'}
+          </p>
+        )}
       </div>
+
       <h1>Your Courses</h1>
       <div className={styles.enrolledCourses}>
         {enrolled.map((e) => (
@@ -160,6 +229,13 @@ function Dashboard() {
             onDrop={() => handleDrop(e.courseId)}
           />
         ))}
+
+        {/* Empty state for enrolled courses */}
+        {enrolled.length === 0 && (
+          <p style={{ color: '#6b7280', padding: '20px', textAlign: 'center' }}>
+            You haven't enrolled in any courses yet. Browse available courses above!
+          </p>
+        )}
       </div>
     </>
   );
