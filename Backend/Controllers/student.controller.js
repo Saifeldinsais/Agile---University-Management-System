@@ -251,6 +251,18 @@ const enrollCourse = async (req, res) => {
       [enrollmentId, gradeAttrId, null]
     );
 
+    // Emit real-time event for admin dashboard
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin").emit("enrollment-created", {
+        id: enrollmentId,
+        studentId: Number(studentId),
+        courseId: Number(courseId),
+        status: "PENDING",
+        createdAt: new Date().toISOString()
+      });
+    }
+
     return res.status(201).json({
       message: "Student enrolled successfully",
       enrollment: {
@@ -293,7 +305,9 @@ const viewEnrolled = async (req, res) => {
         vGrade.value_number AS grade,
 
         MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
-        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code
+        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
+        MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department,
+        MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits
 
       FROM enrollment_entity ee
       JOIN enrollment_entity_attribute vStudent
@@ -367,6 +381,18 @@ const dropCourse = async (req, res) => {
     }
 
     await upsertEnrollmentValueString(enrollmentId, statusAttrId, "drop");
+
+    // Emit real-time event for admin dashboard
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin").emit("enrollment-drop-requested", {
+        enrollmentId,
+        studentId: Number(studentId),
+        courseId: Number(courseId),
+        status: "DROP",
+        requestedAt: new Date().toISOString()
+      });
+    }
 
     return res.status(200).json({
       message: "Course status updated to dropped",

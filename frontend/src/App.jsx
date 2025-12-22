@@ -15,6 +15,7 @@ import Signup from "./pages/Signup";
 
 import AdminDashboard from "./pages/admin/dashboard";
 import AdminFacilities from "./pages/admin/AdminFacilities";
+import AdminEnrollments from "./pages/admin/AdminEnrollments";
 
 
 import StudentDashboard from "./pages/student/Dashboard";
@@ -46,11 +47,8 @@ function App() {
       {/* ADMIN PAGES (no navbar, full admin layout) */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/facilities" element={<AdminFacilities />} />
-
-      {/* ADMIN PAGES (no navbar, full admin layout) */}
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-      <Route path="/admin/facilities" element={<AdminFacilities />} />
       <Route path="/admin/curriculum" element={<AdminCurriculum />} />
+      <Route path="/admin/enrollments" element={<AdminEnrollments />} />
 
 
       {/* Student PAGES */}
