@@ -6,18 +6,24 @@ function NavBarLogged() {
 
   return (
     <header className="navbar">
-      <NavLink to="/student/" className="navbar-logo">
+      <NavLink to="/student/dashboard" className="navbar-logo">
         UMS
       </NavLink>
       <nav className="navbar-links">
-        <NavLink to="/student/" end className={linkClass}>
-          Home
+        <NavLink to="/student/dashboard" end className={linkClass}>
+          Dashboard
+        </NavLink>
+        <NavLink to="/student/courses" className={linkClass}>
+          Courses
+        </NavLink>
+        <NavLink to="/student/assessments" className={linkClass}>
+          Assessments
+        </NavLink>
+        <NavLink to="/student/announcements" className={linkClass}>
+          Announcements
         </NavLink>
         <NavLink to="/student/facilities" className={linkClass}>
           Facilities
-        </NavLink>
-        <NavLink to="/student/dashboard" className={linkClass}>
-          Dashboard
         </NavLink>
       </nav>
       <div className="navbar-actions">

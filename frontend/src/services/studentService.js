@@ -26,6 +26,16 @@ const StudentService = {
       courseId,
     });
   },
+
+  // Get student profile data
+  getStudentProfile: (studentId) => {
+    return apiClient.get(`/student/${studentId}/profile`);
+  },
+
+  // Get student statistics (GPA, credits, etc.)
+  getStudentStats: (studentId) => {
+    return apiClient.get(`/student/${studentId}/stats`);
+  },
 };
 
 export default StudentService;
