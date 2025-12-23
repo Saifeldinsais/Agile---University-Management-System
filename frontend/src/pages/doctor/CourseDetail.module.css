@@ -1,0 +1,346 @@
+.page {
+  padding: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.center {
+  padding: 2rem;
+  text-align: center;
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.topRight {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  padding: 1.75rem;
+}
+
+.header {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.code {
+  color: #333;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.title {
+  margin-top: 0.25rem;
+  color: #0b5ed7;
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 820px) {
+  .gridTwo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.label {
+  font-weight: 700;
+  color: #444;
+  margin-bottom: 0.35rem;
+}
+
+.text {
+  color: #555;
+  line-height: 1.6;
+}
+
+.meta {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.metaRow:last-child {
+  border-bottom: none;
+}
+
+.metaKey {
+  color: #666;
+  font-weight: 700;
+}
+
+.metaVal {
+  color: #222;
+  font-weight: 800;
+}
+
+.section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.sectionTitle {
+  font-weight: 800;
+  color: #333;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.assignmentCard {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.assignmentTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.assignmentTitle {
+  font-weight: 800;
+  color: #222;
+  margin-bottom: 0.25rem;
+}
+
+.assignmentSub {
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.assignmentDesc {
+  margin-top: 0.75rem;
+  color: #555;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.attachments {
+  margin-top: 0.85rem;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.attachTitle {
+  font-weight: 800;
+  color: #333;
+  margin-bottom: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.attachList {
+  margin: 0.25rem 0 0 1.1rem;
+}
+
+.link {
+  color: #0b5ed7;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.form {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 1rem 0 1.25rem 0;
+}
+
+.formRow {
+  margin-bottom: 0.9rem;
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 800;
+  color: #333;
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #0b5ed7;
+}
+
+.textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  min-height: 110px;
+  outline: none;
+  resize: vertical;
+}
+
+.textarea:focus {
+  border-color: #0b5ed7;
+}
+
+.file {
+  width: 100%;
+  padding: 0.25rem 0;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  padding: 0.65rem 1rem;
+  background: #0b5ed7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnSuccess {
+  padding: 0.65rem 1rem;
+  background: #198754;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.btnSecondary {
+  padding: 0.65rem 1rem;
+  background: #f0f0f0;
+  color: #222;
+  border: 1px solid #d7d7d7;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.btnPrimarySmall {
+  padding: 0.45rem 0.75rem;
+  background: #0b5ed7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.btnSecondarySmall {
+  padding: 0.45rem 0.75rem;
+  background: #f0f0f0;
+  color: #222;
+  border: 1px solid #d7d7d7;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.alertError {
+  background: #fee;
+  color: #b42318;
+  padding: 1rem;
+  border: 1px solid #f5c2c7;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.muted {
+  color: #777;
+}
+
+.mutedSmall {
+  color: #777;
+  font-size: 0.85rem;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 999;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 620px;
+  padding: 1.25rem;
+  border: 1px solid #e6e6e6;
+}
+
+.modalTitle {
+  font-weight: 900;
+  color: #222;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}

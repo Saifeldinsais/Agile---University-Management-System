@@ -28,6 +28,37 @@ const getCourseAttrIdByName = async (attributeName) => {
   );
   return row?.attribute_id || null;
 };
+// ---------- Assignment helpers ----------
+const getAssignmentAttrIdByName = async (name) => {
+  const [[row]] = await pool.query(
+    "SELECT attribute_id FROM assignment_attributes WHERE attribute_name=? LIMIT 1",
+    [name]
+  );
+  return row?.attribute_id || null;
+};
+
+const ensureAssignmentAttrs = async () => {
+  // create missing attributes safely (only if your assignment_attributes uses attribute_type not data_type)
+  // If your table column is "data_type", change attribute_type -> data_type in the INSERTs below.
+  const needed = [
+    ["title", "string"],
+    ["description", "string"],
+    ["dueDate", "string"],      // store ISO string
+    ["totalMarks", "number"],
+    ["status", "string"],       // active/closed...
+  ];
+
+  for (const [attrName, attrType] of needed) {
+    const id = await getAssignmentAttrIdByName(attrName);
+    if (!id) {
+      await pool.query(
+        "INSERT INTO assignment_attributes (attribute_name, attribute_type) VALUES (?, ?)",
+        [attrName, attrType]
+      );
+    }
+  }
+};
+
 
 const doctorService = {
   // ===================== Classroom Booking =====================
@@ -94,56 +125,382 @@ const doctorService = {
   },
 
   // ===================== Doctor Courses (Course EAV) =====================
-  // Returns courses assigned to this doctor (by an EAV attribute on course_entity_attribute)
-  // Expected attribute name: doctorId OR instructorId OR assignedDoctorId
-  getDoctorCourses: async (doctorId) => {
-    try {
-      const doctorAttrId = await getCourseAttrIdByName("instructor_id");
+  getDoctorCourses: async (doctorEntityId) => {
+  try {
+    const entityId = Number(doctorEntityId);
+    if (!Number.isFinite(entityId)) {
+      return { success: false, message: "Invalid doctor id" };
+    }
 
-      if (!doctorAttrId) {
-        return {
-          success: false,
-          message: "Course attribute instructor_id not found",
-        };
-      }
+    // 1️⃣ Get email attribute id
+    const [[emailAttr]] = await pool.query(
+      "SELECT attribute_id FROM attributes WHERE attribute_name='email' LIMIT 1"
+    );
+    if (!emailAttr) {
+      return { success: false, message: "Email attribute not found" };
+    }
 
-      const [rows] = await pool.query(
-        `
-        SELECT
-          ce.entity_id AS courseId,
+    // 2️⃣ Get doctor's email from entity EAV
+    const [[emailRow]] = await pool.query(
+      `
+      SELECT value_string AS email
+      FROM entity_attribute
+      WHERE entity_id=? AND attribute_id=? LIMIT 1
+      `,
+      [entityId, emailAttr.attribute_id]
+    );
 
-          MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
-          MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
-          MAX(CASE WHEN ca.attribute_name='description' THEN cea.value_string END) AS description,
-          MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department,
-          MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits,
-          MAX(CASE WHEN ca.attribute_name='semester' THEN cea.value_string END) AS semester,
-          MAX(CASE WHEN ca.attribute_name='year' THEN cea.value_number END) AS year
+    if (!emailRow?.email) {
+      return { success: false, message: "Doctor email not found in entity attributes" };
+    }
 
-        FROM course_entity ce
+    // 3️⃣ Map email → staff_entity
+    const rawEmail = String(emailRow.email || "").trim().toLowerCase();
+    const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
 
-        JOIN course_entity_attribute instructor
-          ON instructor.entity_id = ce.entity_id
-        AND instructor.attribute_id = ?
-        AND instructor.value_number = ?
+    const [[staff]] = await pool.query(
+      `
+      SELECT entity_id
+      FROM staff_entity
+      WHERE LOWER(TRIM(entity_name)) = ?
+        OR LOWER(TRIM(entity_name)) = ?
+      LIMIT 1
+      `,
+      [rawEmail, staffEmail]
+    );
 
-        LEFT JOIN course_entity_attribute cea
-          ON cea.entity_id = ce.entity_id
-        LEFT JOIN course_attributes ca
-          ON ca.attribute_id = cea.attribute_id
+    if (!staff) {
+      return {
+        success: false,
+        message: `Doctor is not registered as staff (searched: ${rawEmail} / ${staffEmail})`,
+      };
+    }
 
-        GROUP BY ce.entity_id
-        ORDER BY ce.entity_id DESC;
-        `,
-        [doctorAttrId, Number(doctorId)]
+
+    const staffId = staff.entity_id;
+
+    // 4️⃣ Fetch assigned courses
+    const [rows] = await pool.query(
+      `
+      SELECT
+        ce.entity_id AS id,
+
+        MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
+        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
+        MAX(CASE WHEN ca.attribute_name='description' THEN cea.value_string END) AS description,
+        MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department,
+        MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits
+
+      FROM assignment_entity ae
+      JOIN course_entity ce ON ce.entity_id = ae.course_id
+      LEFT JOIN course_entity_attribute cea ON cea.entity_id = ce.entity_id
+      LEFT JOIN course_attributes ca ON ca.attribute_id = cea.attribute_id
+      WHERE ae.staff_id = ?
+      GROUP BY ce.entity_id
+      ORDER BY MAX(ae.created_at) DESC
+      `,
+      [staffId]
+    );
+
+    return { success: true, data: rows };
+  } catch (error) {
+    console.error("getDoctorCourses error:", error);
+    return { success: false, message: error.message };
+  }
+},
+// ===================== Create Course Assignment (Doctor) =====================
+// doctorEntityId comes from login (entities.id)
+// courseId is course_entity.id
+createCourseAssignment: async (doctorEntityId, courseId, payload) => {
+  try {
+    const entityId = Number(doctorEntityId);
+    const cId = Number(courseId);
+    if (!Number.isFinite(entityId) || !Number.isFinite(cId)) {
+      return { success: false, message: "Invalid doctorId or courseId" };
+    }
+
+    const { title, description, dueDate, totalMarks } = payload || {};
+    if (!title || !dueDate) {
+      return { success: false, message: "title and dueDate are required" };
+    }
+
+    // resolve staffId (same logic)
+    const [[emailAttr]] = await pool.query(
+      "SELECT attribute_id FROM attributes WHERE attribute_name='email' LIMIT 1"
+    );
+    if (!emailAttr) return { success: false, message: "Email attribute not found" };
+
+    const [[emailRow]] = await pool.query(
+      `SELECT value_string AS email
+       FROM entity_attribute
+       WHERE entity_id=? AND attribute_id=? LIMIT 1`,
+      [entityId, emailAttr.attribute_id]
+    );
+    if (!emailRow?.email) return { success: false, message: "Doctor email not found" };
+
+    const rawEmail = String(emailRow.email || "").trim().toLowerCase();
+    const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
+
+    const [[staff]] = await pool.query(
+      `SELECT entity_id FROM staff_entity
+       WHERE LOWER(TRIM(entity_name)) = ?
+          OR LOWER(TRIM(entity_name)) = ?
+       LIMIT 1`,
+      [rawEmail, staffEmail]
+    );
+    if (!staff) return { success: false, message: "Doctor is not registered as staff" };
+
+    const staffId = staff.entity_id;
+
+    // ✅ create homework assignment in NEW table
+    const [ins] = await pool.query(
+      `INSERT INTO course_assignment_entity (course_id, doctor_staff_id)
+       VALUES (?, ?)`,
+      [cId, staffId]
+    );
+    const assignmentId = ins.insertId;
+
+    // helper to get attr id
+    const getAttrId = async (name) => {
+      const [[row]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
+        [name]
+      );
+      return row?.attribute_id || null;
+    };
+
+    const titleAttrId = await getAttrId("title");
+    const descAttrId = await getAttrId("description");
+    const dueAttrId = await getAttrId("dueDate");
+    const marksAttrId = await getAttrId("totalMarks");
+    const statusAttrId = await getAttrId("status");
+
+    const put = async (attrId, { s = null, n = null, r = null }) => {
+      if (!attrId) return;
+      await pool.query(
+        `INSERT INTO course_assignment_entity_attribute
+         (entity_id, attribute_id, value_string, value_number, value_reference)
+         VALUES (?, ?, ?, ?, ?)`,
+        [assignmentId, attrId, s, n, r]
+      );
+    };
+
+    await put(titleAttrId, { s: String(title) });
+    if (description) await put(descAttrId, { s: String(description) });
+    await put(dueAttrId, { s: String(dueDate) });
+    if (totalMarks !== undefined && totalMarks !== null) await put(marksAttrId, { n: Number(totalMarks) });
+    await put(statusAttrId, { s: "active" });
+
+    return { success: true, data: { assignmentId } };
+  } catch (e) {
+    console.error("createCourseAssignment error:", e);
+    return { success: false, message: e.message };
+  }
+},
+
+// ===================== View Course Assignments (Student) =====================
+getCourseAssignmentsForStudents: async (courseId) => {
+  try {
+    const cId = Number(courseId);
+    if (!Number.isFinite(cId)) {
+      return { success: false, message: "Invalid courseId" };
+    }
+
+    const getAttrId = async (name) => {
+      const [[row]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
+        [name]
+      );
+      return row?.attribute_id || null;
+    };
+
+    const titleAttrId = await getAttrId("title");
+    const descAttrId = await getAttrId("description");
+    const dueAttrId = await getAttrId("dueDate");
+    const marksAttrId = await getAttrId("totalMarks");
+    const statusAttrId = await getAttrId("status");
+    const attachmentsAttrId = await getAttrId("attachments"); // ✅ NEW
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        cae.entity_id AS assignmentId,
+        cae.course_id AS courseId,
+        cae.doctor_staff_id AS doctorStaffId,
+        cae.created_at AS createdAt,
+
+        vTitle.value_string AS title,
+        vDesc.value_string AS description,
+        vDue.value_string AS dueDate,
+        vMarks.value_number AS totalMarks,
+        vStatus.value_string AS status,
+        vAtt.value_string AS attachments  -- ✅ NEW (JSON string)
+
+      FROM course_assignment_entity cae
+
+      LEFT JOIN course_assignment_entity_attribute vTitle
+        ON vTitle.entity_id = cae.entity_id AND vTitle.attribute_id = ?
+      LEFT JOIN course_assignment_entity_attribute vDesc
+        ON vDesc.entity_id = cae.entity_id AND vDesc.attribute_id = ?
+      LEFT JOIN course_assignment_entity_attribute vDue
+        ON vDue.entity_id = cae.entity_id AND vDue.attribute_id = ?
+      LEFT JOIN course_assignment_entity_attribute vMarks
+        ON vMarks.entity_id = cae.entity_id AND vMarks.attribute_id = ?
+      LEFT JOIN course_assignment_entity_attribute vStatus
+        ON vStatus.entity_id = cae.entity_id AND vStatus.attribute_id = ?
+      LEFT JOIN course_assignment_entity_attribute vAtt
+        ON vAtt.entity_id = cae.entity_id AND vAtt.attribute_id = ?  -- ✅ NEW
+
+      WHERE cae.course_id = ?
+        AND (vStatus.value_string IS NULL OR vStatus.value_string='active')
+        AND vTitle.value_string IS NOT NULL     -- ✅ avoids "Untitled Assignment"
+        AND vDue.value_string IS NOT NULL       -- ✅ avoids "No due date"
+
+      ORDER BY cae.created_at DESC;
+      `,
+      [
+        titleAttrId || -1,
+        descAttrId || -1,
+        dueAttrId || -1,
+        marksAttrId || -1,
+        statusAttrId || -1,
+        attachmentsAttrId || -1, // ✅ NEW
+        cId,
+      ]
+    );
+
+    return { success: true, data: rows };
+  } catch (e) {
+    console.error("getCourseAssignmentsForStudents error:", e);
+    return { success: false, message: e.message };
+  }
+},
+
+updateCourseAssignment: async (doctorEntityId, assignmentId, payload) => {
+  try {
+    const aId = Number(assignmentId);
+    if (!Number.isFinite(aId)) return { success: false, message: "Invalid assignmentId" };
+
+    const { title, description, dueDate, totalMarks } = payload || {};
+    if (!title && !description && !dueDate && totalMarks === undefined) {
+      return { success: false, message: "No fields to update" };
+    }
+
+    // helper: get attr id from course_assignment_attributes
+    const getAttrId = async (name) => {
+      const [[row]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
+        [name]
+      );
+      return row?.attribute_id || null;
+    };
+
+    const titleAttrId = await getAttrId("title");
+    const descAttrId = await getAttrId("description");
+    const dueAttrId = await getAttrId("dueDate");
+    const marksAttrId = await getAttrId("totalMarks");
+    const updatedAtAttrId = await getAttrId("updatedAt");
+
+    // helper: upsert value
+    const upsert = async (attrId, { s = null, n = null }) => {
+      if (!attrId) return;
+      const [[existing]] = await pool.query(
+        `SELECT value_id FROM course_assignment_entity_attribute
+         WHERE entity_id=? AND attribute_id=? LIMIT 1`,
+        [aId, attrId]
       );
 
-      return { success: true, data: rows };
-    } catch (error) {
-      console.error("Error in getDoctorCourses:", error);
-      return { success: false, message: error.message };
+      if (existing?.value_id) {
+        await pool.query(
+          `UPDATE course_assignment_entity_attribute
+           SET value_string=?, value_number=?
+           WHERE value_id=?`,
+          [s, n, existing.value_id]
+        );
+      } else {
+        await pool.query(
+          `INSERT INTO course_assignment_entity_attribute
+           (entity_id, attribute_id, value_string, value_number)
+           VALUES (?, ?, ?, ?)`,
+          [aId, attrId, s, n]
+        );
+      }
+    };
+
+    if (title !== undefined) await upsert(titleAttrId, { s: String(title), n: null });
+    if (description !== undefined) await upsert(descAttrId, { s: String(description), n: null });
+    if (dueDate !== undefined) await upsert(dueAttrId, { s: String(dueDate), n: null });
+    if (totalMarks !== undefined) await upsert(marksAttrId, { s: null, n: Number(totalMarks) });
+
+    await upsert(updatedAtAttrId, { s: new Date().toISOString(), n: null });
+
+    return { success: true };
+  } catch (e) {
+    console.error("updateCourseAssignment error:", e);
+    return { success: false, message: e.message };
+  }
+},
+addAssignmentAttachment: async (assignmentId, attachment) => {
+  try {
+    const aId = Number(assignmentId);
+    if (!Number.isFinite(aId)) return { success: false, message: "Invalid assignmentId" };
+
+    const getAttrId = async (attr) => {
+      const [[row]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
+        [attr]
+      );
+      return row?.attribute_id || null;
+    };
+
+    const attachmentsAttrId = await getAttrId("attachments");
+    if (!attachmentsAttrId) return { success: false, message: "attachments attribute missing" };
+
+    const [[existing]] = await pool.query(
+      `SELECT value_id, value_string
+       FROM course_assignment_entity_attribute
+       WHERE entity_id=? AND attribute_id=? LIMIT 1`,
+      [aId, attachmentsAttrId]
+    );
+
+    const prev = existing?.value_string ? JSON.parse(existing.value_string) : [];
+
+    prev.push({
+      name: attachment.name || "attachment",
+      url: attachment.url,               // "/uploads/assignments/..."
+      filename: attachment.filename,
+      originalname: attachment.originalname,
+      mimetype: attachment.mimetype,
+      size: attachment.size,
+      uploadedAt: new Date().toISOString(),
+    });
+
+    const next = JSON.stringify(prev);
+
+    if (existing?.value_id) {
+      await pool.query(
+        `UPDATE course_assignment_entity_attribute SET value_string=? WHERE value_id=?`,
+        [next, existing.value_id]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO course_assignment_entity_attribute (entity_id, attribute_id, value_string)
+         VALUES (?, ?, ?)`,
+        [aId, attachmentsAttrId, next]
+      );
     }
-  },
+
+    return { success: true, data: prev };
+  } catch (e) {
+    console.error("addAssignmentAttachment error:", e);
+    return { success: false, message: e.message };
+  }
+},
+
+
+
+
+
 };
 
 module.exports = doctorService;
