@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 
 import MainLayout from "./layouts/MainLayout";
 import StudentLayout from "./layouts/StudentLayout";
+import DoctorLayout from "./layouts/DoctorLayout";
 
 import NotImplemented from "./pages/NotImplemented";
 
@@ -26,13 +27,13 @@ import StudentHome from "./pages/student/Home";
 import DoctorHome from "./pages/doctor/Home";
 import DoctorMyCourses from "./pages/doctor/MyCourses";
 import DoctorCourseDetail from "./pages/doctor/CourseDetail";
+import DoctorStudents from "./pages/doctor/DoctorStudents";
 
 import AdminCurriculum from "./pages/admin/AdminCurriculum";
 
 import TADashboard from "./pages/ta/TADashboard";
 
 import AdvisorDashboard from "./pages/advisor/AdvisorDashboard";
-import DoctorLayout from "./layouts/DoctorLayout";
 
 
 function App() {
@@ -68,7 +69,7 @@ function App() {
         <Route index element={<DoctorHome />} />
         <Route path="courses" element={<DoctorMyCourses />} />
         <Route path="courses/:courseId" element={<DoctorCourseDetail />} />
-        <Route path="students" element={<NotImplemented />} />
+        <Route path="students" element={<DoctorStudents />} />
         <Route path="grades" element={<NotImplemented />} />
       </Route>
 

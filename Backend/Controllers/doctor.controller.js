@@ -208,6 +208,27 @@ const uploadAssignmentAttachment = async (req, res) => {
   }
 };
 
+const getCourseStudents = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    const result = await doctorService.getCourseStudents(courseId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (error) {
+    console.error("Controller Error in getCourseStudents:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while fetching students",
+      error: error.message,
+    });
+  }
+};
+
 
 
 module.exports = {
@@ -217,4 +238,5 @@ module.exports = {
   getCourseAssignments,
   updateAssignment,
   uploadAssignmentAttachment,
+  getCourseStudents,
 };

@@ -1,10 +1,10 @@
 import { Outlet } from "react-router-dom";
-import NavBarLogged from "../components/NavBarLogged";
+import NavBarDoctor from "../components/NavBarDoctor";
 
 function DoctorLayout() {
   return (
     <div className="app-root">
-      <NavBarLogged/>
+      <NavBarDoctor/>
       <main className="app-main">
         <Outlet />
       </main>

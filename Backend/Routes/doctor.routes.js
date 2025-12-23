@@ -14,5 +14,6 @@ router.post(
   uploadAssignment.single("file"),
   doctorController.uploadAssignmentAttachment
 );
+router.get("/courses/:courseId/students", doctorController.getCourseStudents);
 
 module.exports = router;
