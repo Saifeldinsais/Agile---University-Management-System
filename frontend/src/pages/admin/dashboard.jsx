@@ -110,6 +110,9 @@ function Dashboard() {
                 <button className="menu-item" onClick={() => go("/admin/staff/directory")} style={{ fontSize: 13 }}>
                   Directory
                 </button>
+                <button className="menu-item" onClick={() => go("/admin/staff/assignments")} style={{ fontSize: 13 }}>
+                  Course Assignments
+                </button>
               </div>
             )}
           </div>

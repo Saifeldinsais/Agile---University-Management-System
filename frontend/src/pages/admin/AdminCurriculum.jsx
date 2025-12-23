@@ -178,6 +178,9 @@ function AdminCurriculum() {
                 <button className="menu-item" onClick={() => navigate("/admin/staff/directory")} style={{ fontSize: 13 }}>
                   Directory
                 </button>
+                <button className="menu-item" onClick={() => navigate("/admin/staff/assignments")} style={{ fontSize: 13 }}>
+                  Course Assignments
+                </button>
               </div>
             )}
           </div>

@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/admin/dashboard";
 import AdminFacilities from "./pages/admin/AdminFacilities";
 import AdminEnrollments from "./pages/admin/AdminEnrollments";
 import AdminStaffDirectory from "./pages/admin/AdminStaffDirectory";
+import CourseAssignments from "./pages/admin/CourseAssignments";
 
 
 import StudentDashboard from "./pages/student/Dashboard";
@@ -49,6 +50,7 @@ function App() {
       <Route path="/admin/curriculum" element={<AdminCurriculum />} />
       <Route path="/admin/enrollments" element={<AdminEnrollments />} />
       <Route path="/admin/staff/directory" element={<AdminStaffDirectory />} />
+      <Route path="/admin/staff/assignments" element={<CourseAssignments />} />
 
 
       {/* Student PAGES */}
