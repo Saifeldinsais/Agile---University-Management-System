@@ -24,12 +24,15 @@ import StudentDashboard from "./pages/student/Dashboard";
 import StudentHome from "./pages/student/Home";
 
 import DoctorHome from "./pages/doctor/Home";
+import DoctorMyCourses from "./pages/doctor/MyCourses";
+import DoctorCourseDetail from "./pages/doctor/CourseDetail";
 
 import AdminCurriculum from "./pages/admin/AdminCurriculum";
 
 import TADashboard from "./pages/ta/TADashboard";
 
 import AdvisorDashboard from "./pages/advisor/AdvisorDashboard";
+import DoctorLayout from "./layouts/DoctorLayout";
 
 
 function App() {
@@ -61,9 +64,10 @@ function App() {
       </Route>
 
       {/* Doctor/Teacher PAGES */}
-      <Route path="doctor" element={<MainLayout />}>
+      <Route path="doctor" element={<DoctorLayout />}>
         <Route index element={<DoctorHome />} />
-        <Route path="courses" element={<NotImplemented />} />
+        <Route path="courses" element={<DoctorMyCourses />} />
+        <Route path="courses/:courseId" element={<DoctorCourseDetail />} />
         <Route path="students" element={<NotImplemented />} />
         <Route path="grades" element={<NotImplemented />} />
       </Route>
