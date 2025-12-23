@@ -451,6 +451,7 @@ function AdminEnrollments() {
 
     // Pending action for optimistic UI
     const [pendingAction, setPendingAction] = useState(null);
+    const [staffMenuOpen, setStaffMenuOpen] = useState(false);
 
     const showToast = (message, type = "info") => {
         setToast({ message, type });
@@ -690,9 +691,26 @@ function AdminEnrollments() {
                     <button className="menu-item" onClick={() => navigate("/admin/curriculum")}>
                         Curriculum
                     </button>
-                    <button className="menu-item" onClick={() => alert("Staff soon")}>
-                        Staff
-                    </button>
+
+                    {/* Staff Dropdown */}
+                    <div>
+                        <button
+                            className="menu-item"
+                            onClick={() => setStaffMenuOpen(!staffMenuOpen)}
+                            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}
+                        >
+                            Staff
+                            <span style={{ fontSize: 10 }}>{staffMenuOpen ? "▼" : "▶"}</span>
+                        </button>
+                        {staffMenuOpen && (
+                            <div style={{ paddingLeft: 16 }}>
+                                <button className="menu-item" onClick={() => navigate("/admin/staff/directory")} style={{ fontSize: 13 }}>
+                                    Directory
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <button className="menu-item active" onClick={() => navigate("/admin/enrollments")}>
                         Enrollments
                     </button>

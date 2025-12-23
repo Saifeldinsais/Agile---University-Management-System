@@ -16,6 +16,7 @@ import Signup from "./pages/Signup";
 import AdminDashboard from "./pages/admin/dashboard";
 import AdminFacilities from "./pages/admin/AdminFacilities";
 import AdminEnrollments from "./pages/admin/AdminEnrollments";
+import AdminStaffDirectory from "./pages/admin/AdminStaffDirectory";
 
 
 import StudentDashboard from "./pages/student/Dashboard";
@@ -47,6 +48,7 @@ function App() {
       <Route path="/admin/facilities" element={<AdminFacilities />} />
       <Route path="/admin/curriculum" element={<AdminCurriculum />} />
       <Route path="/admin/enrollments" element={<AdminEnrollments />} />
+      <Route path="/admin/staff/directory" element={<AdminStaffDirectory />} />
 
 
       {/* Student PAGES */}

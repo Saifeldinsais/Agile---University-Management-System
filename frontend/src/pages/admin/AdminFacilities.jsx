@@ -96,6 +96,7 @@ function AdminFacilities() {
   const [modalMode, setModalMode] = useState("add");
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [editingSlot, setEditingSlot] = useState(null);
+  const [staffMenuOpen, setStaffMenuOpen] = useState(false);
 
   async function loadClassrooms() {
     setLoading(true);
@@ -243,7 +244,25 @@ function AdminFacilities() {
             Curriculum
           </button>
 
-          <button className="menu-item">Staff</button>
+          {/* Staff Dropdown */}
+          <div>
+            <button
+              className="menu-item"
+              onClick={() => setStaffMenuOpen(!staffMenuOpen)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}
+            >
+              Staff
+              <span style={{ fontSize: 10 }}>{staffMenuOpen ? "▼" : "▶"}</span>
+            </button>
+            {staffMenuOpen && (
+              <div style={{ paddingLeft: 16 }}>
+                <button className="menu-item" onClick={() => navigate("/admin/staff/directory")} style={{ fontSize: 13 }}>
+                  Directory
+                </button>
+              </div>
+            )}
+          </div>
+
           <button className="menu-item" onClick={() => navigate("/admin/enrollments")}>
             Enrollments
           </button>
