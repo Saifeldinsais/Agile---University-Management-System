@@ -54,9 +54,17 @@ const adminOnly = [verifyToken, requireRole('admin')];
  */
 const adminOrAdvisor = [verifyToken, requireRole(['admin', 'advisor'])];
 
+// Alias for verifyToken
+const authenticateToken = verifyToken;
+
+// Convenience middleware for admin-only routes
+const requireAdmin = requireRole('admin');
+
 module.exports = {
     verifyToken,
+    authenticateToken,
     requireRole,
+    requireAdmin,
     adminOnly,
     adminOrAdvisor
 };
