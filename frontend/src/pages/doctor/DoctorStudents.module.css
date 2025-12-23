@@ -1,0 +1,173 @@
+.page {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.headerCard {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  color: #222;
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.subtitle {
+  margin: 0.6rem 0 0 0;
+  color: #666;
+  line-height: 1.6;
+}
+
+.controls {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-weight: 900;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.input,
+.select {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 1rem;
+  outline: none;
+  background: #fff;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #b9b9b9;
+}
+
+.skeletonInput {
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  background: #f5f5f5;
+}
+
+.courseMeta {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.9rem;
+  border-top: 1px solid #eee;
+}
+
+.metaItem {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.metaLabel {
+  color: #777;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.metaValue {
+  color: #222;
+  font-weight: 900;
+}
+
+.error {
+  background: #fee;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #f4caca;
+  margin-bottom: 1rem;
+}
+
+.contentCard {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.loadingBox,
+.emptyBox {
+  padding: 2rem;
+  text-align: center;
+  color: #777;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 12px;
+}
+
+.tableWrap {
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead th {
+  text-align: left;
+  padding: 0.9rem;
+  font-size: 0.9rem;
+  color: #444;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+}
+
+.table tbody td {
+  padding: 0.9rem;
+  border-bottom: 1px solid #f1f1f1;
+  color: #444;
+}
+
+.cellStrong {
+  font-weight: 900;
+  color: #222;
+}
+
+.statusPill {
+  display: inline-flex;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.85rem;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  color: #333;
+}

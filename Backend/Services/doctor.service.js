@@ -2,6 +2,8 @@
 const ClassroomValue = require("../EAV models/classroom_value");
 const ClassroomAttribute = require("../EAV models/classroom_attribute");
 const ClassroomEntity = require("../EAV models/classroom_entity");
+const EnrollmentAttribute = require("../EAV models/enrollment_attribute");
+
 const pool = require("../Db_config/DB");
 
 let attributesInitialized = false;
@@ -28,6 +30,12 @@ const getCourseAttrIdByName = async (attributeName) => {
   );
   return row?.attribute_id || null;
 };
+
+const getEnrAttrId = async (name) => {
+  const a = await EnrollmentAttribute.getAttributeByName(name);
+  return a?.attribute_id || null;
+};
+
 // ---------- Assignment helpers ----------
 const getAssignmentAttrIdByName = async (name) => {
   const [[row]] = await pool.query(
@@ -493,6 +501,127 @@ addAssignmentAttachment: async (assignmentId, attachment) => {
     return { success: true, data: prev };
   } catch (e) {
     console.error("addAssignmentAttachment error:", e);
+    return { success: false, message: e.message };
+  }
+},
+getCourseStudents: async (courseId) => {
+  try {
+    const cId = Number(courseId);
+    if (!Number.isFinite(cId)) {
+      return { success: false, message: "Invalid courseId" };
+    }
+
+    if (typeof initEnrollmentAttrs === "function") {
+      await initEnrollmentAttrs();
+    }
+
+    // enrollment attr ids
+    const studentAttr = await EnrollmentAttribute.getAttributeByName("studentId");
+    const courseAttr = await EnrollmentAttribute.getAttributeByName("courseId");
+    const statusAttr = await EnrollmentAttribute.getAttributeByName("status");
+    const gradeAttr = await EnrollmentAttribute.getAttributeByName("grade");
+
+    if (!studentAttr || !courseAttr) {
+      return {
+        success: false,
+        message: "Enrollment attributes missing (studentId/courseId)",
+      };
+    }
+
+    // general user attrs (user_entity_attribute uses global `attributes` table)
+    const [[emailAttr]] = await pool.query(
+      "SELECT attribute_id FROM attributes WHERE attribute_name='email' LIMIT 1"
+    );
+    const [[nameAttr]] = await pool.query(
+      `
+      SELECT attribute_id
+      FROM attributes
+      WHERE attribute_name IN ('username','name')
+      ORDER BY (attribute_name='username') DESC
+      LIMIT 1
+      `
+    );
+
+    const emailAttrId = emailAttr?.attribute_id ?? -1;
+    const nameAttrId = nameAttr?.attribute_id ?? -1;
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        ee.entity_id AS enrollmentId,
+
+        -- student/course ids are stored in value_number in your DB
+        CAST(vStudent.value_number AS UNSIGNED) AS studentId,
+        CAST(vCourse.value_number  AS UNSIGNED) AS courseId,
+
+        vStatus.value_string AS status,
+        vGrade.value_number  AS grade,
+
+        ue.entity_id AS userEntityId,
+        ue.entity_name AS userEntityName,
+
+        uName.value_string  AS name,
+        uEmail.value_string AS email
+
+      FROM enrollment_entity ee
+
+      JOIN enrollment_entity_attribute vCourse
+        ON vCourse.entity_id = ee.entity_id
+       AND vCourse.attribute_id = ?
+       AND CAST(vCourse.value_number AS UNSIGNED) = ?
+
+      JOIN enrollment_entity_attribute vStudent
+        ON vStudent.entity_id = ee.entity_id
+       AND vStudent.attribute_id = ?
+
+      LEFT JOIN enrollment_entity_attribute vStatus
+        ON vStatus.entity_id = ee.entity_id
+       AND vStatus.attribute_id = ?
+
+      LEFT JOIN enrollment_entity_attribute vGrade
+        ON vGrade.entity_id = ee.entity_id
+       AND vGrade.attribute_id = ?
+
+      -- student user
+      LEFT JOIN user_entity ue
+        ON ue.entity_id = CAST(vStudent.value_number AS UNSIGNED)
+
+      LEFT JOIN user_entity_attribute uName
+        ON uName.entity_id = ue.entity_id
+       AND uName.attribute_id = ?
+
+      LEFT JOIN user_entity_attribute uEmail
+        ON uEmail.entity_id = ue.entity_id
+       AND uEmail.attribute_id = ?
+
+      -- keep only non-rejected (case-insensitive)
+      WHERE (vStatus.value_string IS NULL OR UPPER(TRIM(vStatus.value_string)) <> 'REJECTED')
+
+      ORDER BY ee.entity_id DESC;
+      `,
+      [
+        courseAttr.attribute_id,
+        cId,
+        studentAttr.attribute_id,
+        statusAttr?.attribute_id ?? -1,
+        gradeAttr?.attribute_id ?? -1,
+        nameAttrId,
+        emailAttrId,
+      ]
+    );
+
+    const data = (rows || []).map((r) => ({
+      enrollmentId: r.enrollmentId,
+      id: r.studentId, // studentId
+      name: r.name || r.userEntityName || "Unknown",
+      email: r.email || "",
+      status: r.status || "APPROVED",
+      grade: r.grade ?? null,
+    }));
+
+    return { success: true, data };
+  } catch (e) {
+    console.error("getCourseStudents error:", e);
     return { success: false, message: e.message };
   }
 },
