@@ -77,7 +77,7 @@ const getDoctorCourses = async (req, res) => {
 const createCourseAssignment = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { doctorId, title, description, dueDate, totalMarks } = req.body;
+    const { doctorId, title, description, dueDate, totalMarks, type, status } = req.body;
 
     if (!courseId || !doctorId || !title || !dueDate) {
       return res.status(400).json({
@@ -91,6 +91,8 @@ const createCourseAssignment = async (req, res) => {
       description,
       dueDate,
       totalMarks,
+      type: type || "assignment",      
+      status: status || "active",      
     });
 
     if (!result.success) {
@@ -102,21 +104,22 @@ const createCourseAssignment = async (req, res) => {
 
     return res.status(201).json({
       status: "success",
-      message: "Assignment created successfully",
+      message: "Assessment created successfully",
       data: result.data, // { assignmentId }
     });
   } catch (error) {
     console.error("Controller Error in createCourseAssignment:", error);
     return res.status(500).json({
       status: "error",
-      message: "An unexpected error occurred while creating assignment",
+      message: "An unexpected error occurred while creating assessment",
       error: error.message,
     });
   }
 };
 
-// ===================== Get Course Assignments (Doctor) =====================
-// GET /doctor/courses/:courseId/assignments
+
+// ===================== Get Course Assessments =====================
+// GET /doctor/courses/:courseId/assessments
 const getCourseAssignments = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -145,30 +148,43 @@ const getCourseAssignments = async (req, res) => {
     console.error("Controller Error in getCourseAssignments:", error);
     return res.status(500).json({
       status: "error",
-      message: "An unexpected error occurred while fetching assignments",
+      message: "An unexpected error occurred while fetching assessments",
       error: error.message,
     });
   }
 };
 
+
+// ===================== Update Assessment =====================
+// PUT /doctor/assessments/:assignmentId
 const updateAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;
-    const { doctorId, title, description, dueDate, totalMarks } = req.body;
+    const { doctorId, title, description, dueDate, totalMarks, type, status } = req.body;
 
-    if (!doctorId) return res.status(400).json({ status: "fail", message: "doctorId is required" });
+    if (!doctorId) {
+      return res.status(400).json({ status: "fail", message: "doctorId is required" });
+    }
 
     const result = await doctorService.updateCourseAssignment(doctorId, assignmentId, {
-      title, description, dueDate, totalMarks
+      title,
+      description,
+      dueDate,
+      totalMarks,
+      type,     
+      status,   
     });
 
-    if (!result.success) return res.status(400).json({ status: "fail", message: result.message });
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
 
-    return res.status(200).json({ status: "success", message: "Assignment updated" });
+    return res.status(200).json({ status: "success", message: "Assessment updated" });
   } catch (e) {
     return res.status(500).json({ status: "error", message: e.message });
   }
 };
+
 
 const uploadAssignmentAttachment = async (req, res) => {
   try {
@@ -379,6 +395,196 @@ const getCourseSchedule = async (req, res) => {
   }
 };
 
+// GET /api/doctor/by-email?email=...
+const getDoctorByEmail = async (req, res) => {
+  const { email } = req.query;
+  const result = await doctorService.getDoctorByEmail(email);
+
+  if (!result.success) return res.status(400).json(result);
+  return res.status(200).json(result);
+};
+
+const updateMyDoctorProfile = async (req, res) => {
+  try {
+    const userEntityId = req.user?.id; // entities.entity_id
+    if (!userEntityId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    // editable fields only
+    const payload = {
+      name: req.body?.name,
+      phone: req.body?.phone,
+      officePhone: req.body?.officePhone,
+      officeLocation: req.body?.officeLocation,
+      bio: req.body?.bio,
+      specialization: req.body?.specialization,
+    };
+
+    const result = await doctorService.updateMyDoctorProfile(userEntityId, payload);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (e) {
+    console.error("updateMyDoctorProfile controller error:", e);
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+
+// ===================== Office Hours =====================
+// GET /doctor/office-hours/:doctorId
+const getMyOfficeHours = async (req, res) => {
+  try {
+    const doctorEntityId = req.user?.id; // entities.entity_id
+    if (!doctorEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const result = await doctorService.getMyOfficeHours(doctorEntityId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (error) {
+    console.error("Controller Error in getMyOfficeHours:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while fetching office hours",
+      error: error.message,
+    });
+  }
+};
+
+
+// POST /doctor/office-hours/:doctorId
+const createOfficeHour = async (req, res) => {
+  try {
+    const doctorEntityId = req.user?.id; // entities.entity_id
+    if (!doctorEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const { day, startTime, endTime, location } = req.body;
+
+    if (!day || !startTime || !endTime || !location) {
+      return res.status(400).json({
+        status: "fail",
+        message: "day, startTime, endTime, location are required",
+      });
+    }
+
+    const result = await doctorService.createOfficeHour(doctorEntityId, {
+      day,
+      startTime,
+      endTime,
+      location,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(201).json({
+      status: "success",
+      message: "Office hour created",
+      data: result.data,
+    });
+  } catch (error) {
+    console.error("Controller Error in createOfficeHour:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while creating office hour",
+      error: error.message,
+    });
+  }
+};
+
+// ===================== Meeting Requests =====================
+// GET /doctor/meeting-requests/:doctorId
+const getMeetingRequests = async (req, res) => {
+  try {
+    const doctorEntityId = req.user?.id; // entities.entity_id
+    if (!doctorEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const result = await doctorService.getMeetingRequests(doctorEntityId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (error) {
+    console.error("Controller Error in getMeetingRequests:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while fetching meeting requests",
+      error: error.message,
+    });
+  }
+};
+
+
+// ===================== Approve Meeting Request =====================
+const approveMeetingRequest = async (req, res) => {
+  try {
+    const doctorEntityId = req.user?.id;
+    if (!doctorEntityId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Meeting request id is required" });
+    }
+
+    const result = await doctorService.updateMeetingRequestStatus(id, "approved", doctorEntityId);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json({ success: true, message: "Meeting request approved" });
+  } catch (e) {
+    console.error("approveMeetingRequest error:", e);
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+const rejectMeetingRequest = async (req, res) => {
+  try {
+    const doctorEntityId = req.user?.id;
+    if (!doctorEntityId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Meeting request id is required" });
+    }
+
+    const result = await doctorService.updateMeetingRequestStatus(id, "rejected", doctorEntityId);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json({ success: true, message: "Meeting request rejected" });
+  } catch (e) {
+    console.error("rejectMeetingRequest error:", e);
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+
+
 module.exports = {
   bookClassroom,
   getDoctorCourses,
@@ -391,4 +597,11 @@ module.exports = {
   uploadCourseResource,
   getCourseStaff,
   getCourseSchedule,
+  getDoctorByEmail,
+  updateMyDoctorProfile,
+  getMyOfficeHours,
+  createOfficeHour,
+  getMeetingRequests,
+  approveMeetingRequest,
+  rejectMeetingRequest,
 };

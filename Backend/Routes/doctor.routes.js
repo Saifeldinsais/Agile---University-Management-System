@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const uploadAssignment = require("../Utils/uploadAssignments");
+const { authenticateToken } = require("../Utils/authMiddleware");const uploadAssignment = require("../Utils/uploadAssignments");
 const uploadResource = require("../Utils/uploadResources"); // We'll create this
 const doctorController = require("../Controllers/doctor.controller");
 
@@ -30,6 +30,19 @@ router.get("/courses/:courseId/staff", doctorController.getCourseStaff);
 
 // ========== Course Schedule Routes ==========
 router.get("/courses/:courseId/schedule/:doctorId", doctorController.getCourseSchedule);
+
+// ========== Office Hours Routes ==========
+router.get("/office-hours/me",authenticateToken ,doctorController.getMyOfficeHours);
+router.post("/office-hours", authenticateToken ,doctorController.createOfficeHour);
+
+router.get("/meeting-requests",authenticateToken , doctorController.getMeetingRequests);
+router.put("/meeting-requests/:id/approve", authenticateToken ,doctorController.approveMeetingRequest);
+router.put("/meeting-requests/:id/reject", authenticateToken ,doctorController.rejectMeetingRequest);
+
+
+router.get("/by-email", doctorController.getDoctorByEmail);
+
+router.put("/profile", authenticateToken , doctorController.updateMyDoctorProfile);
 
 module.exports = router;
 
