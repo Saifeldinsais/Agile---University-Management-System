@@ -8,44 +8,43 @@ import EnrolledCourse from "./EnrolledCourse/EnrolledCourse";
 import styles from "./Dashboard.module.css";
 
 function Dashboard() {
-
   const [refreshEnrolled, setRefreshEnrolled] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'courses'
+  const [activeTab, setActiveTab] = useState("overview"); // 'overview' or 'courses'
+
+  const [assignments, setAssignments] = useState([]);
 
   // Set page title
   useEffect(() => {
-    document.title = 'Student Dashboard - Academic Overview';
+    document.title = "Student Dashboard - Academic Overview";
   }, []);
 
-  const [student, _setStudent] = useState(() => { //getStudent
-    // Try 'user' first (new key), then 'student' (old key)
-    const storedUser = localStorage.getItem("user") || localStorage.getItem("student");
-    if (!storedUser) {
-      return null;
-    }
+  const [student, _setStudent] = useState(() => {
+    const storedUser =
+      localStorage.getItem("user") || localStorage.getItem("student");
+    if (!storedUser) return null;
+
     try {
       return JSON.parse(storedUser);
     } catch (err) {
-      console.error('Failed to parse stored user:', err);
-      localStorage.removeItem('user');
-      localStorage.removeItem('student');
+      console.error("Failed to parse stored user:", err);
+      localStorage.removeItem("user");
+      localStorage.removeItem("student");
       return null;
     }
   });
 
   const [courses, setCourses] = useState([]);
+  const [enrolled, setEnrolled] = useState([]);
 
   // Socket.io connection for real-time updates
   useEffect(() => {
     socketService.connect();
     socketService.joinRoom("student");
 
-    // Listen for enrollment updates (admin approve/reject)
     const handleEnrollmentUpdated = (data) => {
       console.log("Enrollment status updated:", data);
 
-      // Update local enrolled courses
       setEnrolled((prev) =>
         prev.map((e) =>
           e.enrollmentId === data.enrollmentId
@@ -54,44 +53,54 @@ function Dashboard() {
         )
       );
 
-      // Show notification
-      const message = data.action === "APPROVE"
-        ? "Your enrollment has been approved! 🎉"
-        : `Your enrollment was rejected. ${data.note ? `Reason: ${data.note}` : ''}`;
+      const message =
+        data.action === "APPROVE"
+          ? "Your enrollment has been approved! 🎉"
+          : `Your enrollment was rejected. ${
+              data.note ? `Reason: ${data.note}` : ""
+            }`;
 
-      setNotification({ message, type: data.action === "APPROVE" ? "success" : "error" });
+      setNotification({
+        message,
+        type: data.action === "APPROVE" ? "success" : "error",
+      });
       setTimeout(() => setNotification(null), 5000);
     };
 
+    // ✅ optional: if you emit assignment-created from backend, this refreshes
+    const handleAssignmentCreated = (data) => {
+      // data: { courseId } (or whatever you emit)
+      // We’ll just re-fetch assignments.
+      console.log("Assignment created:", data);
+      // trigger fetch by calling function inline (we’ll call fetchAssignments below via dependency)
+      setRefreshEnrolled((p) => !p);
+    };
+
     socketService.on("enrollment-updated", handleEnrollmentUpdated);
+    socketService.on("assignment-created", handleAssignmentCreated);
 
     return () => {
       socketService.off("enrollment-updated", handleEnrollmentUpdated);
+      socketService.off("assignment-created", handleAssignmentCreated);
     };
   }, []);
 
+  // Fetch courses
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        console.log('Fetching courses from:', `${API_BASE_URL}/student/viewCourses`);
         const res = await fetch(`${API_BASE_URL}/student/viewCourses`);
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
-        console.log('Courses fetched:', data);
-        setCourses(data);
+        setCourses(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error fetching courses:", err);
-        setCourses([]); // Set empty array on error
+        setCourses([]);
       }
     };
 
     fetchCourses();
-  }, []); // Remove student dependency to always fetch courses
-
+  }, []);
 
   const handleEnroll = async (courseId) => {
     if (!student?.id) {
@@ -104,21 +113,17 @@ function Dashboard() {
 
       if (res.status === 200 || res.status === 201) {
         alert("Successfully enrolled in course!");
-        setRefreshEnrolled(prev => !prev)
-      }
-      else {
+        setRefreshEnrolled((prev) => !prev);
+      } else {
         alert("Enrollment failed.");
       }
     } catch (err) {
       console.error(err);
-      if (err.status === 400) {
-        alert("Student Already Enrolled")
-      }
-      else {
-        alert("Error enrolling in course.");
-      }
+      if (err.status === 400) alert("Student Already Enrolled");
+      else alert("Error enrolling in course.");
     }
   };
+
   const handleDrop = async (courseId) => {
     if (!student?.id) {
       alert("No student logged in.");
@@ -130,24 +135,18 @@ function Dashboard() {
 
       if (res.status === 200 || res.status === 201) {
         alert("Successfully Requested to drop course!");
-        setRefreshEnrolled(prev => !prev)
-      }
-      else {
+        setRefreshEnrolled((prev) => !prev);
+      } else {
         alert("Request failed.");
       }
     } catch (err) {
       console.error(err);
-      if (err.status === 400) {
-        alert("Student Already Requested Drop")
-      }
-      else {
-        alert("Error Dropping the course.");
-      }
+      if (err.status === 400) alert("Student Already Requested Drop");
+      else alert("Error Dropping the course.");
     }
   };
 
-  const [enrolled, setEnrolled] = useState([]);
-
+  // Fetch enrolled courses
   useEffect(() => {
     const fetchEnrolled = async () => {
       if (!student?.id) return;
@@ -155,7 +154,6 @@ function Dashboard() {
       try {
         const res = await fetch(`${API_BASE_URL}/student/enrolled/${student.id}`);
         const data = await res.json();
-
         setEnrolled(data.courses || []);
       } catch (err) {
         console.error("Error fetching enrolled courses:", err);
@@ -165,26 +163,94 @@ function Dashboard() {
     fetchEnrolled();
   }, [student, refreshEnrolled]);
 
+  // ✅ NEW: Fetch assignments for approved enrolled courses
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        const approved = enrolled.filter(
+          (c) => c.status?.toLowerCase() === "approved"
+        );
+
+        if (approved.length === 0) {
+          setAssignments([]);
+          return;
+        }
+
+        // IMPORTANT: this route must exist in backend:
+        // GET /student/courses/:courseId/assignments
+        const responses = await Promise.all(
+          approved.map((c) =>
+            fetch(`${API_BASE_URL}/student/courses/${c.courseId}/assignments`)
+              .then((r) => r.json())
+              .catch(() => ({}))
+          )
+        );
+
+        // flatten assignments
+        const all = responses.flatMap((r) => r.assignments || r.data || []);
+
+        // normalize
+        const normalized = all
+          .map((a) => ({
+            ...a,
+            dueDateObj: a.dueDate ? new Date(a.dueDate) : null,
+          }))
+          .filter((a) => a.dueDateObj && !isNaN(a.dueDateObj));
+
+        setAssignments(normalized);
+      } catch (err) {
+        console.error("Error fetching assignments:", err);
+        setAssignments([]);
+      }
+    };
+
+    fetchAssignments();
+  }, [enrolled]);
+
   // Compute available courses (filter out enrolled ones)
   const availableCourses = useMemo(() => {
-    const enrolledCourseIds = enrolled.map(e => parseInt(e.courseId));
-    return courses.filter(course => !enrolledCourseIds.includes(parseInt(course._id)));
+    const enrolledCourseIds = enrolled.map((e) => parseInt(e.courseId));
+    return courses.filter(
+      (course) => !enrolledCourseIds.includes(parseInt(course._id))
+    );
   }, [courses, enrolled]);
+
+  // course lookup map for prettier deadlines display
+  const courseById = useMemo(() => {
+    const m = new Map();
+    (courses || []).forEach((c) => m.set(String(c._id), c));
+    return m;
+  }, [courses]);
 
   // Calculate academic statistics from enrolled courses
   const academicStats = useMemo(() => {
-    const totalCredits = enrolled.reduce((sum, course) => sum + (parseInt(course.credits) || 0), 0);
-    const completedCourses = enrolled.filter(c => c.status?.toLowerCase() === 'approved').length;
-    const pendingCourses = enrolled.filter(c => c.status?.toLowerCase() === 'pending').length;
-    
-    // Calculate average grade from approved courses only
-    const approvedCourses = enrolled.filter(c => 
-      c.status?.toLowerCase() === 'approved' && c.grade != null && c.grade !== '' && !isNaN(c.grade)
+    const totalCredits = enrolled.reduce(
+      (sum, course) => sum + (parseInt(course.credits) || 0),
+      0
     );
-    const averageGrade = approvedCourses.length > 0
-      ? (approvedCourses.reduce((sum, c) => sum + parseFloat(c.grade), 0) / approvedCourses.length).toFixed(1)
-      : '--';
-    
+    const completedCourses = enrolled.filter(
+      (c) => c.status?.toLowerCase() === "approved"
+    ).length;
+    const pendingCourses = enrolled.filter(
+      (c) => c.status?.toLowerCase() === "pending"
+    ).length;
+
+    const approvedCourses = enrolled.filter(
+      (c) =>
+        c.status?.toLowerCase() === "approved" &&
+        c.grade != null &&
+        c.grade !== "" &&
+        !isNaN(c.grade)
+    );
+
+    const averageGrade =
+      approvedCourses.length > 0
+        ? (
+            approvedCourses.reduce((sum, c) => sum + parseFloat(c.grade), 0) /
+            approvedCourses.length
+          ).toFixed(1)
+        : "--";
+
     return {
       totalEnrolled: enrolled.length,
       completedCourses,
@@ -194,60 +260,68 @@ function Dashboard() {
     };
   }, [enrolled]);
 
-  // Get upcoming deadlines - dynamically based on enrolled courses
+  // ✅ UPDATED: Upcoming Deadlines from real assignments (not random)
   const upcomingDeadlines = useMemo(() => {
-    // Generate mock deadlines based on enrolled courses (simulating real deadline system)
-    // In a real app, this would fetch from an assignments/deadlines API
-    return enrolled
-      .filter(c => c.status?.toLowerCase() === 'approved')
+    const now = new Date();
+
+    return assignments
+      .filter((a) => (a.status || "active").toLowerCase() === "active")
+      .filter((a) => a.dueDateObj >= now)
+      .sort((a, b) => a.dueDateObj - b.dueDateObj)
       .slice(0, 3)
-      .map((course, idx) => {
-        const dayOffset = Math.floor(Math.random() * 14) + 2; // Random deadline between 2-15 days
+      .map((a) => {
+        const c = courseById.get(String(a.courseId));
+        const courseTitle = c?.title || a.courseTitle || a.courseId;
+        const courseCode = c?.code || a.courseCode || "";
+
         return {
-          id: `${course.enrollmentId}-${idx}`,
-          course: course.title,
-          assignment: `${course.code} - Assignment ${idx + 1}`,
-          dueDate: new Date(Date.now() + dayOffset * 24 * 60 * 60 * 1000),
+          id: a.assignmentId || `${a.courseId}-${a.title}-${a.dueDate}`,
+          course: courseTitle,
+          assignment: `${courseCode ? courseCode + " - " : ""}${a.title}`,
+          dueDate: a.dueDateObj,
+          type: a.type || "assignment",
+          totalMarks: a.totalMarks,
         };
       });
-  }, [enrolled]);
+  }, [assignments, courseById]);
 
   // Get recent notifications based on actual enrollment status
   const recentNotifications = useMemo(() => {
     const notifications = [];
-    
-    // Check for pending enrollments
-    const pendingEnrollments = enrolled.filter(c => c.status?.toLowerCase() === 'pending');
+
+    const pendingEnrollments = enrolled.filter(
+      (c) => c.status?.toLowerCase() === "pending"
+    );
     if (pendingEnrollments.length > 0) {
       notifications.push({
-        id: 'pending',
-        title: 'Enrollment Pending',
+        id: "pending",
+        title: "Enrollment Pending",
         message: `You have ${pendingEnrollments.length} course(s) awaiting approval from your advisor`,
-        type: 'info',
+        type: "info",
       });
     }
-    
-    // Welcome notification
+
     notifications.push({
-      id: 'welcome',
-      title: 'Welcome to Student Dashboard',
-      message: 'All your academic activities in one place',
-      type: 'success',
+      id: "welcome",
+      title: "Welcome to Student Dashboard",
+      message: "All your academic activities in one place",
+      type: "success",
     });
 
-    // Course progress notification
     if (enrolled.length > 0) {
-      const approvedCount = enrolled.filter(c => c.status?.toLowerCase() === 'approved').length;
+      const approvedCount = enrolled.filter(
+        (c) => c.status?.toLowerCase() === "approved"
+      ).length;
       if (approvedCount > 0) {
         notifications.push({
-          id: 'progress',
-          title: 'Course Progress',
+          id: "progress",
+          title: "Course Progress",
           message: `You are enrolled in ${approvedCount} active course(s)`,
-          type: 'success',
+          type: "success",
         });
       }
     }
-    
+
     return notifications;
   }, [enrolled]);
 
@@ -255,22 +329,27 @@ function Dashboard() {
     <>
       {/* Real-time notification toast */}
       {notification && (
-        <div style={{
-          position: 'fixed',
-          top: 20,
-          right: 20,
-          padding: '16px 24px',
-          borderRadius: 12,
-          backgroundColor: notification.type === 'success' ? '#d1fae5' : '#fee2e2',
-          color: notification.type === 'success' ? '#065f46' : '#991b1b',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-          zIndex: 9999,
-          animation: 'slideIn 0.3s ease-out',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10
-        }}>
-          <span style={{ fontSize: 20 }}>{notification.type === 'success' ? '✓' : '✗'}</span>
+        <div
+          style={{
+            position: "fixed",
+            top: 20,
+            right: 20,
+            padding: "16px 24px",
+            borderRadius: 12,
+            backgroundColor:
+              notification.type === "success" ? "#d1fae5" : "#fee2e2",
+            color: notification.type === "success" ? "#065f46" : "#991b1b",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+            zIndex: 9999,
+            animation: "slideIn 0.3s ease-out",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 20 }}>
+            {notification.type === "success" ? "✓" : "✗"}
+          </span>
           <span>{notification.message}</span>
         </div>
       )}
@@ -279,10 +358,12 @@ function Dashboard() {
         {/* Welcome Header */}
         <div className={styles.welcomeSection}>
           <div className={styles.welcomeContent}>
-            <h1>Welcome back, {student?.name || student?.username || 'Student'}!</h1>
+            <h1>
+              Welcome back, {student?.name || student?.username || "Student"}!
+            </h1>
             <p>Your centralized dashboard for all academic activities</p>
             <div className={styles.studentInfo}>
-              <span>{student?.email || 'Not available'}</span>
+              <span>{student?.email || "Not available"}</span>
               {student?.id && <span>Student ID: {student.id}</span>}
             </div>
           </div>
@@ -291,21 +372,25 @@ function Dashboard() {
         {/* Tab Navigation */}
         <div className={styles.tabNavigation}>
           <button
-            className={`${styles.tabButton} ${activeTab === 'overview' ? styles.active : ''}`}
-            onClick={() => setActiveTab('overview')}
+            className={`${styles.tabButton} ${
+              activeTab === "overview" ? styles.active : ""
+            }`}
+            onClick={() => setActiveTab("overview")}
           >
             Overview
           </button>
           <button
-            className={`${styles.tabButton} ${activeTab === 'courses' ? styles.active : ''}`}
-            onClick={() => setActiveTab('courses')}
+            className={`${styles.tabButton} ${
+              activeTab === "courses" ? styles.active : ""
+            }`}
+            onClick={() => setActiveTab("courses")}
           >
             Courses
           </button>
         </div>
 
         {/* OVERVIEW TAB */}
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <div className={styles.overviewTab}>
             {/* Academic Summary Cards */}
             <section className={styles.section}>
@@ -331,7 +416,8 @@ function Dashboard() {
                   <div className={styles.statNumber}>3</div>
                   <div className={styles.statContent}>
                     <h3>{academicStats.pendingCourses}</h3>
-                    <p>Pending Approvals</p>\n                  </div>
+                    <p>Pending Approvals</p>
+                  </div>
                 </div>
 
                 <div className={styles.statCard}>
@@ -347,9 +433,17 @@ function Dashboard() {
                   <div className={styles.statContent}>
                     <h3>{academicStats.averageGrade}</h3>
                     <p>Average Grade</p>
-                    {academicStats.averageGrade !== '--' && (
+                    {academicStats.averageGrade !== "--" && (
                       <small style={{ opacity: 0.7 }}>
-                        ({enrolled.filter(c => c.status?.toLowerCase() === 'approved' && c.grade != null).length} courses)
+                        (
+                        {
+                          enrolled.filter(
+                            (c) =>
+                              c.status?.toLowerCase() === "approved" &&
+                              c.grade != null
+                          ).length
+                        }{" "}
+                        courses)
                       </small>
                     )}
                   </div>
@@ -358,7 +452,6 @@ function Dashboard() {
             </section>
 
             <div className={styles.twoColumnLayout}>
-              {/* Upcoming Deadlines */}
               <section className={styles.section}>
                 <h2>Upcoming Deadlines</h2>
                 <div className={styles.deadlinesList}>
@@ -368,17 +461,39 @@ function Dashboard() {
                         <div className={styles.deadlineLeft}>
                           <h4>{deadline.assignment}</h4>
                           <p className={styles.courseName}>{deadline.course}</p>
+                          {deadline.type && (
+                            <small style={{ opacity: 0.7 }}>
+                              Type: {deadline.type}
+                              {deadline.totalMarks != null
+                                ? ` • Marks: ${deadline.totalMarks}`
+                                : ""}
+                            </small>
+                          )}
                         </div>
                         <div className={styles.deadlineRight}>
                           <span className={styles.dueDate}>
-                            {deadline.dueDate.toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: deadline.dueDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                            {deadline.dueDate.toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year:
+                                deadline.dueDate.getFullYear() !==
+                                new Date().getFullYear()
+                                  ? "numeric"
+                                  : undefined,
                             })}
                           </span>
-                          <small style={{ color: '#6b7280', display: 'block', marginTop: '4px' }}>
-                            {Math.ceil((deadline.dueDate - new Date()) / (1000 * 60 * 60 * 24))} days away
+                          <small
+                            style={{
+                              color: "#6b7280",
+                              display: "block",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {Math.ceil(
+                              (deadline.dueDate - new Date()) /
+                                (1000 * 60 * 60 * 24)
+                            )}{" "}
+                            days away
                           </small>
                         </div>
                       </div>
@@ -395,9 +510,14 @@ function Dashboard() {
                 <div className={styles.notificationsList}>
                   {recentNotifications.length > 0 ? (
                     recentNotifications.map((notif) => (
-                      <div key={notif.id} className={`${styles.notificationItem} ${styles[notif.type]}`}>
+                      <div
+                        key={notif.id}
+                        className={`${styles.notificationItem} ${
+                          styles[notif.type]
+                        }`}
+                      >
                         <div className={styles.notificationIcon}>
-                          {notif.type === 'success' ? '✓' : 'ℹ'}
+                          {notif.type === "success" ? "✓" : "ℹ"}
                         </div>
                         <div className={styles.notificationContent}>
                           <h4>{notif.title}</h4>
@@ -416,24 +536,27 @@ function Dashboard() {
             <section className={styles.section}>
               <h2>Quick Access</h2>
               <div className={styles.quickAccessGrid}>
-                <button className={styles.quickAccessCard} onClick={() => setActiveTab('courses')}>
+                <button
+                  className={styles.quickAccessCard}
+                  onClick={() => setActiveTab("courses")}
+                >
                   <div className={styles.qaIcon}>▶</div>
                   <h3>My Courses</h3>
                   <p>View and manage your enrolled courses</p>
                 </button>
-                <div className={styles.quickAccessCard} style={{ cursor: 'default' }}>
+                <div className={styles.quickAccessCard} style={{ cursor: "default" }}>
                   <div className={styles.qaIcon}>▶</div>
                   <h3>Assessments</h3>
                   <p>View your grades and assessments</p>
                   <span className={styles.soon}>Coming Soon</span>
                 </div>
-                <div className={styles.quickAccessCard} style={{ cursor: 'default' }}>
+                <div className={styles.quickAccessCard} style={{ cursor: "default" }}>
                   <div className={styles.qaIcon}>▶</div>
                   <h3>Announcements</h3>
                   <p>Stay updated with course announcements</p>
                   <span className={styles.soon}>Coming Soon</span>
                 </div>
-                <div className={styles.quickAccessCard} style={{ cursor: 'default' }}>
+                <div className={styles.quickAccessCard} style={{ cursor: "default" }}>
                   <div className={styles.qaIcon}>▶</div>
                   <h3>Facility Services</h3>
                   <p>Access library, lab, and other services</p>
@@ -445,12 +568,11 @@ function Dashboard() {
         )}
 
         {/* COURSES TAB */}
-        {activeTab === 'courses' && (
+        {activeTab === "courses" && (
           <div className={styles.coursesTab}>
             <div className={styles.coursesSectionContent}>
               <h2>Available Courses</h2>
               <div className={styles.coursesContainer}>
-                {/* Show available courses that aren't enrolled */}
                 {availableCourses.map((e) => (
                   <Course
                     title={e.title || "error"}
@@ -463,10 +585,18 @@ function Dashboard() {
                   />
                 ))}
 
-                {/* Empty state for available courses */}
                 {availableCourses.length === 0 && (
-                  <p style={{ color: '#6b7280', padding: '20px', textAlign: 'center', gridColumn: '1 / -1' }}>
-                    {courses.length === 0 ? 'No courses available.' : 'You are enrolled in all available courses!'}
+                  <p
+                    style={{
+                      color: "#6b7280",
+                      padding: "20px",
+                      textAlign: "center",
+                      gridColumn: "1 / -1",
+                    }}
+                  >
+                    {courses.length === 0
+                      ? "No courses available."
+                      : "You are enrolled in all available courses!"}
                   </p>
                 )}
               </div>
@@ -483,7 +613,7 @@ function Dashboard() {
                       code: e.code,
                       credits: e.credits,
                       department: e.department,
-                      _id: e.courseId
+                      _id: e.courseId,
                     }}
                     status={e.status}
                     grade={e.grade}
@@ -491,10 +621,17 @@ function Dashboard() {
                   />
                 ))}
 
-                {/* Empty state for enrolled courses */}
                 {enrolled.length === 0 && (
-                  <p style={{ color: '#6b7280', padding: '20px', textAlign: 'center', gridColumn: '1 / -1' }}>
-                    You haven't enrolled in any courses yet. Browse available courses above!
+                  <p
+                    style={{
+                      color: "#6b7280",
+                      padding: "20px",
+                      textAlign: "center",
+                      gridColumn: "1 / -1",
+                    }}
+                  >
+                    You haven't enrolled in any courses yet. Browse available
+                    courses above!
                   </p>
                 )}
               </div>

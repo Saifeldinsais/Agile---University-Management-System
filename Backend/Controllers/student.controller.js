@@ -1,4 +1,7 @@
 const pool = require("../Db_config/DB");
+const doctorService = require("../Services/doctor.service");
+const studentService = require("../Services/student.service.js");
+const AssignmentService = require("../Services/assignment.service");
 
 /* -------------------- Helpers -------------------- */
 const ensureEnrollmentAttr = async (name, type) => {
@@ -312,10 +315,157 @@ const dropCourse = async (req, res) => {
     return res.status(500).json({ message: "Error updating course status", error: error.message });
   }
 };
+const viewCourseAssignments = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    // (optional but recommended) security:
+    // 1) ensure req.user is student
+    // 2) ensure student is enrolled in this course before returning assignments
+
+    const result = await doctorService.getCourseAssignmentsForStudents(courseId);
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    return res.status(200).json({ assignments: result.data });
+  } catch (e) {
+    return res.status(500).json({ message: e.message });
+  }
+};
+
+// GET /student/staff/:staffId/office-hours
+const getStaffOfficeHours = async (req, res) => {
+  try {
+    const studentEntityId = req.user?.id;
+    if (!studentEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const { staffId } = req.params;
+
+    const result = await studentService.getOfficeHoursByStaffId(staffId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (e) {
+    console.error("getStaffOfficeHours controller error:", e);
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
+
+// POST /student/staff/:staffId/meeting-requests
+const createMeetingRequestForStaff = async (req, res) => {
+  try {
+    const studentEntityId = req.user?.id;
+    const studentName =
+      req.user?.name || req.user?.username || req.user?.email || "Student";
+
+    if (!studentEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const { staffId } = req.params;
+    const { reason, requestedDate, requestedTime } = req.body;
+
+    if (!reason?.trim()) {
+      return res.status(400).json({ status: "fail", message: "reason is required" });
+    }
+    if (!requestedDate || !requestedTime) {
+      return res.status(400).json({
+        status: "fail",
+        message: "requestedDate and requestedTime are required",
+      });
+    }
+
+    const result = await studentService.createMeetingRequestForStaff({
+      staffId,
+      studentEntityId,
+      studentName,
+      reason,
+      requestedDate,
+      requestedTime,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(201).json({
+      status: "success",
+      message: "Meeting request submitted",
+      data: result.data,
+    });
+  } catch (e) {
+    console.error("createMeetingRequestForStaff controller error:", e);
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
+
+
+// GET /student/meeting-requests
+const getMyMeetingRequests = async (req, res) => {
+  try {
+    const studentEntityId = req.user?.id;
+    if (!studentEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const result = await studentService.getMyMeetingRequests(studentEntityId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (e) {
+    console.error("getMyMeetingRequests controller error:", e);
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
+const getCourseInstructors = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    if (!courseId) return res.status(400).json({ message: "courseId is required" });
+
+    const result = await AssignmentService.getAssignmentsByCourse(courseId);
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    // keep only active + doctors/instructors (choose the roles you want)
+    const instructors = (result.data || [])
+      .filter(a => (a.status || "active") === "active")
+      .filter(a => ["doctor", "instructor"].includes(String(a.role || "").toLowerCase()))
+      .map(a => ({
+        staffId: a.staff?.id,
+        name: a.staff?.name,
+        email: a.staff?.email,
+        role: a.role,
+        department: a.staff?.department || a.department || "",
+      }));
+
+    return res.status(200).json({ status: "success", data: instructors });
+  } catch (e) {
+    console.error("getCourseInstructors error:", e);
+    return res.status(500).json({ message: e.message });
+  }
+};
+
 
 module.exports = {
   viewCourses,
   enrollCourse,
   viewEnrolled,
   dropCourse,
+  viewCourseAssignments,
+  getMyMeetingRequests,
+  createMeetingRequestForStaff,
+  getStaffOfficeHours,
+  getCourseInstructors
 };

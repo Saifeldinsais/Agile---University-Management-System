@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require("../Utils/authMiddleware");const uploadAssignment = require("../Utils/uploadAssignments");
+const { authenticateToken } = require("../Utils/authMiddleware");
+const uploadAssignment = require("../Utils/uploadAssignments");
 const uploadResource = require("../Utils/uploadResources"); // We'll create this
 const doctorController = require("../Controllers/doctor.controller");
 
