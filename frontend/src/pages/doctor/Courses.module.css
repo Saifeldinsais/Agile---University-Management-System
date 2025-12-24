@@ -129,12 +129,57 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 450px;
+  transition: all 0.3s ease;
+}
+
+.section:hover {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+  transform: translateY(-2px);
 }
 
 .section h3 {
   margin-top: 0;
   color: #333;
   font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.sectionContent {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  padding-right: 8px;
+}
+
+.sectionContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sectionContent::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.sectionContent::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.sectionContent::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.sectionFooter {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #2563eb;
+  font-weight: 600;
+  padding: 8px 0;
+  border-top: 1px solid #e0e0e0;
+  margin-top: auto;
 }
 
 .studentList,
@@ -370,6 +415,152 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.sectionModal {
+  background: white;
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 700px;
+  width: 100%;
+  position: relative;
+  max-height: 85vh;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionModal h2 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.4rem;
+  padding-right: 40px;
+}
+
+.modalContentArea {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 12px;
+  margin-bottom: 16px;
+}
+
+.modalContentArea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalContentArea::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.modalContentArea::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.modalContentArea::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.studentItemLarge {
+  padding: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.studentItemLarge .studentName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.studentItemLarge .studentEmail {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.enrollDate {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 6px;
+}
+
+.resourceItemLarge {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.resourceItemLarge .resourceIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.resourceItemLarge .resourceInfo {
+  flex: 1;
+}
+
+.resourceItemLarge .resourceName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.resourceItemLarge .resourceDesc {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.uploadDate {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.taItemLarge {
+  padding: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  border-left: 4px solid #2563eb;
+}
+
+.taItemLarge .taName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.taItemLarge .taRole {
+  font-size: 0.9rem;
+  color: #2563eb;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.taItemLarge .taEmail {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.assignDate {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 6px;
 }
 
 .closeBtn {

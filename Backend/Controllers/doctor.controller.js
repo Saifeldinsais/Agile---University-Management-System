@@ -241,12 +241,15 @@ const getCourseResources = async (req, res) => {
       });
     }
 
+    console.log(`[getCourseResources] Fetching resources for course ${courseId}`);
     const result = await doctorService.getCourseResources(courseId);
 
     if (!result.success) {
+      console.error(`[getCourseResources] Error: ${result.message}`);
       return res.status(400).json({ status: "fail", message: result.message });
     }
 
+    console.log(`[getCourseResources] Found ${result.data.length} resources`);
     return res.status(200).json({ status: "success", data: result.data });
   } catch (error) {
     console.error("Controller Error in getCourseResources:", error);
@@ -264,9 +267,10 @@ const uploadCourseResource = async (req, res) => {
     const { title, description } = req.body;
     const doctorId = req.body.doctorId;
 
-    console.log('Upload request received:', { courseId, doctorId, title, file: req.file ? 'yes' : 'no' });
+    console.log('[uploadCourseResource] Request:', { courseId, doctorId, title, hasFile: !!req.file });
 
     if (!courseId || !doctorId || !title) {
+      console.error('[uploadCourseResource] Missing fields:', { courseId, doctorId, title, hasFile: !!req.file });
       return res.status(400).json({
         status: "fail",
         message: `Missing required fields. courseId: ${courseId}, doctorId: ${doctorId}, title: ${title}, file: ${req.file ? 'yes' : 'no'}`,
@@ -274,6 +278,7 @@ const uploadCourseResource = async (req, res) => {
     }
 
     if (!req.file) {
+      console.error('[uploadCourseResource] No file provided');
       return res.status(400).json({
         status: "fail",
         message: "No file provided",
@@ -281,10 +286,9 @@ const uploadCourseResource = async (req, res) => {
     }
 
     const file = req.file;
-
-    // url served by express.static("/uploads", ...)
     const url = `/uploads/resources/${file.filename}`;
 
+    console.log('[uploadCourseResource] Calling service with:', { courseId, doctorId, title, fileName: file.originalname });
     const result = await doctorService.uploadCourseResource(courseId, doctorId, {
       title,
       description,
@@ -295,9 +299,11 @@ const uploadCourseResource = async (req, res) => {
     });
 
     if (!result.success) {
+      console.error('[uploadCourseResource] Service error:', result.message);
       return res.status(400).json({ status: "fail", message: result.message });
     }
 
+    console.log('[uploadCourseResource] Success, resource ID:', result.data?.resource_id);
     return res.status(200).json({
       status: "success",
       message: "Resource uploaded successfully",

@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS course_resources (
     doctor_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
+    category VARCHAR(100) DEFAULT 'Other',
+    categoryDescription TEXT,
     file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     file_type VARCHAR(50),
@@ -156,6 +158,7 @@ CREATE TABLE IF NOT EXISTS course_schedule (
 -- 1. course_staff table is NOT used - deleted to avoid confusion
 -- 2. All staff assignments come from assignment_entity (admin interface)
 -- 3. All staff details come from staff_entity_attribute (EAV model)
--- 4. Course resources are stored in course_resources table
+-- 4. Course resources are stored in course_resources table with category grouping
 -- 5. Course schedules are stored in course_schedule table
+-- 6. Resources can be grouped by category (Lectures, Tutorials, etc.)
 -- ============================================================================

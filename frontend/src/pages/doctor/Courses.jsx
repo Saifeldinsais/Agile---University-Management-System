@@ -21,6 +21,10 @@ function DoctorCourses() {
   const [uploadFiles, setUploadFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
 
+  // Section modals
+  const [showSectionModal, setShowSectionModal] = useState(false);
+  const [activeSection, setActiveSection] = useState(null); // 'students', 'resources', 'staff'
+
   useEffect(() => {
     loadCourses();
   }, []);
@@ -40,8 +44,10 @@ function DoctorCourses() {
 
   const handleViewDetails = async (course) => {
     setSelectedCourse(course);
-    const courseId = course.id || course.entity_id;
+    const courseId = course.entity_id || course.id;
     const doctorId = localStorage.getItem("userId");
+    
+    console.log(`[handleViewDetails] Course selected:`, { courseId, courseCode: course.code, courseTitle: course.title });
     
     try {
       // Load students
@@ -57,12 +63,14 @@ function DoctorCourses() {
 
       // Load course resources
       try {
+        console.log(`Loading resources for courseId: ${courseId}`);
         const resourcesRes = await axios.get(
           `${API}/api/doctor/courses/${courseId}/resources`
         );
         setCourseResources(resourcesRes.data.data || []);
       } catch (err) {
         console.error("Error loading course resources:", err.response?.data || err.message);
+        console.error("Full error:", err);
         setCourseResources([]);
       }
 
@@ -102,7 +110,7 @@ function DoctorCourses() {
     }
 
     setUploading(true);
-    const courseId = selectedCourse.id || selectedCourse.entity_id;
+    const courseId = selectedCourse.entity_id || selectedCourse.id;
     const doctorId = localStorage.getItem("userId");
     
     let uploadedCount = 0;
@@ -218,121 +226,271 @@ function DoctorCourses() {
 
               <div className={styles.grid}>
                 {/* Enrolled Students */}
-                <div className={styles.section}>
+                <div 
+                  className={styles.section}
+                  onClick={() => {
+                    setActiveSection('students');
+                    setShowSectionModal(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <h3>Enrolled Students ({students.length})</h3>
-                  <div className={styles.studentList}>
-                    {students.length === 0 ? (
-                      <p className={styles.noData}>No students enrolled</p>
-                    ) : (
-                      students.slice(0, 10).map((student) => (
-                        <div key={student.id} className={styles.studentItem}>
-                          <div className={styles.studentName}>
-                            {student.name || student.fullName}
+                  <div className={styles.sectionContent}>
+                    <div className={styles.studentList}>
+                      {students.length === 0 ? (
+                        <p className={styles.noData}>No students enrolled</p>
+                      ) : (
+                        students.slice(0, 5).map((student) => (
+                          <div key={student.id} className={styles.studentItem}>
+                            <div className={styles.studentName}>
+                              {student.name || student.fullName}
+                            </div>
+                            <div className={styles.studentEmail}>{student.email}</div>
                           </div>
-                          <div className={styles.studentEmail}>{student.email}</div>
-                        </div>
-                      ))
-                    )}
-                    {students.length > 10 && (
-                      <div className={styles.more}>+{students.length - 10} more</div>
-                    )}
+                        ))
+                      )}
+                      {students.length > 5 && (
+                        <div className={styles.more}>+{students.length - 5} more students</div>
+                      )}
+                    </div>
                   </div>
+                  <div className={styles.sectionFooter}>Click to view all</div>
                 </div>
 
                 {/* Course Resources/Materials */}
-                <div className={styles.section}>
-                  <h3>Course Resources & Materials</h3>
-                  <div className={styles.resourceList}>
-                    {courseResources.length === 0 ? (
-                      <p className={styles.noData}>No resources uploaded yet</p>
-                    ) : (
-                      courseResources.map((resource) => (
-                        <div key={resource.resource_id} className={styles.resourceItem}>
-                          <span className={styles.resourceIcon}>
-                            {resource.file_type === "pdf" ? "📄" : "📎"}
-                          </span>
-                          <div className={styles.resourceInfo}>
-                            <div className={styles.resourceName}>{resource.title}</div>
-                            {resource.description && (
-                              <div className={styles.resourceDesc}>
-                                {resource.description}
+                <div 
+                  className={styles.section}
+                  onClick={() => {
+                    setActiveSection('resources');
+                    setShowSectionModal(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <h3>Course Resources & Materials ({courseResources.length})</h3>
+                  <div className={styles.sectionContent}>
+                    <div className={styles.resourceList}>
+                      {courseResources.length === 0 ? (
+                        <p className={styles.noData}>No resources uploaded yet</p>
+                      ) : (
+                        courseResources.slice(0, 5).map((resource) => (
+                          <div key={resource.resource_id} className={styles.resourceItem}>
+                            <span className={styles.resourceIcon}>
+                              {resource.file_type === "pdf" ? "📄" : "📎"}
+                            </span>
+                            <div className={styles.resourceInfo}>
+                              <div className={styles.resourceName}>{resource.title}</div>
+                              {resource.description && (
+                                <div className={styles.resourceDesc}>
+                                  {resource.description}
+                                </div>
+                              )}
+                              <div className={styles.resourceMeta}>
+                                {resource.file_type && (
+                                  <span className={styles.fileType}>
+                                    {resource.file_type.toUpperCase()}
+                                  </span>
+                                )}
+                                {resource.file_size && (
+                                  <span className={styles.fileSize}>
+                                    {(resource.file_size / 1024 / 1024).toFixed(2)} MB
+                                  </span>
+                                )}
                               </div>
-                            )}
-                            <div className={styles.resourceMeta}>
-                              {resource.file_type && (
-                                <span className={styles.fileType}>
-                                  {resource.file_type.toUpperCase()}
-                                </span>
-                              )}
-                              {resource.file_size && (
-                                <span className={styles.fileSize}>
-                                  {(resource.file_size / 1024 / 1024).toFixed(2)} MB
-                                </span>
-                              )}
                             </div>
                           </div>
-                          {resource.file_path && (
-                            <a
-                              href={resource.file_path}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={styles.downloadBtn}
-                            >
-                              ↓
-                            </a>
-                          )}
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                      {courseResources.length > 5 && (
+                        <div className={styles.more}>+{courseResources.length - 5} more resources</div>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    className={styles.uploadBtn}
-                    onClick={() => setShowUploadModal(true)}
-                  >
-                    + Upload Resource
-                  </button>
+                  <div className={styles.sectionFooter}>Click to view all or upload</div>
                 </div>
 
                 {/* Assigned TAs */}
-                <div className={styles.section}>
+                <div 
+                  className={styles.section}
+                  onClick={() => {
+                    setActiveSection('staff');
+                    setShowSectionModal(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <h3>Assigned Teaching Assistants ({courseStaff.length})</h3>
-                  <div className={styles.taList}>
-                    {courseStaff.length === 0 ? (
-                      <p className={styles.noData}>No TAs assigned to this course</p>
-                    ) : (
-                      courseStaff.map((staff) => (
-                        <div key={staff.assignmentId} className={styles.taItem}>
-                          <div className={styles.taName}>{staff.name}</div>
-                          <div className={styles.taRole}>{staff.role}</div>
-                          <div className={styles.taEmail}>{staff.email}</div>
-                        </div>
-                      ))
-                    )}
+                  <div className={styles.sectionContent}>
+                    <div className={styles.taList}>
+                      {courseStaff.length === 0 ? (
+                        <p className={styles.noData}>No TAs assigned to this course</p>
+                      ) : (
+                        courseStaff.slice(0, 5).map((staff) => (
+                          <div key={staff.assignmentId} className={styles.taItem}>
+                            <div className={styles.taName}>{staff.name}</div>
+                            <div className={styles.taRole}>{staff.role}</div>
+                            <div className={styles.taEmail}>{staff.email}</div>
+                          </div>
+                        ))
+                      )}
+                      {courseStaff.length > 5 && (
+                        <div className={styles.more}>+{courseStaff.length - 5} more assistants</div>
+                      )}
+                    </div>
                   </div>
+                  <div className={styles.sectionFooter}>Click to view all</div>
                 </div>
 
                 {/* Course Schedule */}
                 <div className={styles.section}>
                   <h3>Course Schedule</h3>
-                  <div className={styles.schedule}>
-                    {courseSchedule.length === 0 ? (
-                      <p className={styles.noData}>No schedule assigned yet</p>
-                    ) : (
-                      courseSchedule.map((slot) => (
-                        <div key={slot.scheduleId} className={styles.scheduleItem}>
-                          <span className={styles.day}>{slot.day}</span>
-                          <span className={styles.time}>
-                            {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                          </span>
-                          <span className={styles.room}>{slot.room}</span>
-                        </div>
-                      ))
-                    )}
+                  <div className={styles.sectionContent}>
+                    <div className={styles.schedule}>
+                      {courseSchedule.length === 0 ? (
+                        <p className={styles.noData}>No schedule assigned yet</p>
+                      ) : (
+                        courseSchedule.map((slot) => (
+                          <div key={slot.scheduleId} className={styles.scheduleItem}>
+                            <span className={styles.day}>{slot.day}</span>
+                            <span className={styles.time}>
+                              {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                            </span>
+                            <span className={styles.room}>{slot.room}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Section Modal (View All Items) */}
+      {showSectionModal && (
+        <div className={styles.modal}>
+          <div className={styles.sectionModal}>
+            <button
+              className={styles.closeBtn}
+              onClick={() => {
+                setShowSectionModal(false);
+                setActiveSection(null);
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Students Modal */}
+            {activeSection === 'students' && (
+              <>
+                <h2>Enrolled Students ({students.length})</h2>
+                <div className={styles.modalContentArea}>
+                  {students.length === 0 ? (
+                    <p className={styles.noData}>No students enrolled</p>
+                  ) : (
+                    students.map((student) => (
+                      <div key={student.id} className={styles.studentItemLarge}>
+                        <div className={styles.studentName}>{student.name || student.fullName}</div>
+                        <div className={styles.studentEmail}>{student.email}</div>
+                        {student.enrollmentDate && (
+                          <div className={styles.enrollDate}>
+                            Enrolled: {new Date(student.enrollmentDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Resources Modal */}
+            {activeSection === 'resources' && (
+              <>
+                <h2>Course Resources & Materials ({courseResources.length})</h2>
+                <div className={styles.modalContentArea}>
+                  {courseResources.length === 0 ? (
+                    <p className={styles.noData}>No resources uploaded yet</p>
+                  ) : (
+                    courseResources.map((resource) => (
+                      <div key={resource.resource_id} className={styles.resourceItemLarge}>
+                        <span className={styles.resourceIcon}>
+                          {resource.file_type === "pdf" ? "📄" : "📎"}
+                        </span>
+                        <div className={styles.resourceInfo}>
+                          <div className={styles.resourceName}>{resource.title}</div>
+                          {resource.description && (
+                            <div className={styles.resourceDesc}>{resource.description}</div>
+                          )}
+                          <div className={styles.resourceMeta}>
+                            {resource.file_type && (
+                              <span className={styles.fileType}>
+                                {resource.file_type.toUpperCase()}
+                              </span>
+                            )}
+                            {resource.file_size && (
+                              <span className={styles.fileSize}>
+                                {(resource.file_size / 1024 / 1024).toFixed(2)} MB
+                              </span>
+                            )}
+                            {resource.upload_date && (
+                              <span className={styles.uploadDate}>
+                                {new Date(resource.upload_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {resource.file_path && (
+                          <a
+                            href={resource.file_path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.downloadBtn}
+                          >
+                            ↓ Download
+                          </a>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <button
+                  className={styles.uploadBtn}
+                  onClick={() => {
+                    setShowSectionModal(false);
+                    setShowUploadModal(true);
+                  }}
+                >
+                  + Upload New Resource
+                </button>
+              </>
+            )}
+
+            {/* Staff Modal */}
+            {activeSection === 'staff' && (
+              <>
+                <h2>Assigned Teaching Assistants ({courseStaff.length})</h2>
+                <div className={styles.modalContentArea}>
+                  {courseStaff.length === 0 ? (
+                    <p className={styles.noData}>No TAs assigned to this course</p>
+                  ) : (
+                    courseStaff.map((staff) => (
+                      <div key={staff.assignmentId} className={styles.taItemLarge}>
+                        <div className={styles.taName}>{staff.name}</div>
+                        <div className={styles.taRole}>{staff.role}</div>
+                        <div className={styles.taEmail}>{staff.email}</div>
+                        {staff.assignedDate && (
+                          <div className={styles.assignDate}>
+                            Assigned: {new Date(staff.assignedDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 

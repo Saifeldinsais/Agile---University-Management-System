@@ -633,15 +633,33 @@ const doctorService = {
         return { success: false, message: "courseId is required" };
       }
 
+      const cId = Number(courseId);
+      if (!Number.isFinite(cId)) {
+        return { success: false, message: "Invalid courseId format" };
+      }
+
+      console.log(`[getCourseResources] Querying for course_id = ${cId}`);
+
+      // Verify course exists
+      const [[courseExists]] = await pool.query(
+        `SELECT entity_id FROM course_entity WHERE entity_id = ? LIMIT 1`,
+        [cId]
+      );
+
+      if (!courseExists) {
+        console.error(`[getCourseResources] Course ${cId} does not exist`);
+        return { success: false, message: `Course with ID ${cId} does not exist` };
+      }
+
       const [resources] = await pool.query(
         `SELECT resource_id, title, description, file_name, file_path, file_type, file_size, upload_date
          FROM course_resources
          WHERE course_id = ? AND is_active = TRUE
          ORDER BY upload_date DESC`,
-        [courseId]
+        [cId]
       );
 
-      console.log(`Retrieved ${resources ? resources.length : 0} resources for course ${courseId}`);
+      console.log(`[getCourseResources] Retrieved ${resources ? resources.length : 0} resources for course ${cId}`);
 
       return { success: true, data: resources || [] };
     } catch (e) {
@@ -652,23 +670,37 @@ const doctorService = {
 
   uploadCourseResource: async (courseId, doctorId, resourceData) => {
     try {
-      const { title, description, fileName, filePath, fileType, fileSize } = resourceData;
+      const { title, fileName, filePath, fileType, fileSize, description } = resourceData;
 
       if (!title) {
         return { success: false, message: "Resource title is required" };
       }
 
-      if (!courseId || !doctorId) {
-        return { success: false, message: "courseId and doctorId are required" };
+      const cId = Number(courseId);
+      const dId = Number(doctorId);
+
+      if (!Number.isFinite(cId) || !Number.isFinite(dId)) {
+        return { success: false, message: "Invalid courseId or doctorId format" };
       }
 
-      console.log(`Uploading resource: ${title} to course ${courseId}`);
+      console.log(`[uploadCourseResource] Uploading: title=${title}, course=${cId}, doctor=${dId}`);
+
+      // Verify course exists
+      const [[courseExists]] = await pool.query(
+        `SELECT entity_id FROM course_entity WHERE entity_id = ? LIMIT 1`,
+        [cId]
+      );
+
+      if (!courseExists) {
+        console.error(`[uploadCourseResource] Course ${cId} does not exist`);
+        return { success: false, message: `Course with ID ${cId} does not exist` };
+      }
 
       const [result] = await pool.query(
         `INSERT INTO course_resources 
          (course_id, doctor_id, title, description, file_name, file_path, file_type, file_size, is_active)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
-        [courseId, doctorId, title, description || null, fileName, filePath, fileType, fileSize || 0]
+        [cId, dId, title, description || null, fileName, filePath, fileType, fileSize || 0]
       );
 
       const [resource] = await pool.query(
@@ -678,7 +710,7 @@ const doctorService = {
         [result.insertId]
       );
 
-      console.log(`Resource created with ID: ${result.insertId}`);
+      console.log(`[uploadCourseResource] Resource created with ID: ${result.insertId}`);
 
       return { success: true, data: resource[0] };
     } catch (e) {
