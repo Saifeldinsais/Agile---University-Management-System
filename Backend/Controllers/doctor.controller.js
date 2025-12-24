@@ -229,7 +229,149 @@ const getCourseStudents = async (req, res) => {
   }
 };
 
+// ===================== Course Resources =====================
+const getCourseResources = async (req, res) => {
+  try {
+    const { courseId } = req.params;
 
+    if (!courseId) {
+      return res.status(400).json({
+        status: "fail",
+        message: "courseId is required",
+      });
+    }
+
+    const result = await doctorService.getCourseResources(courseId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (error) {
+    console.error("Controller Error in getCourseResources:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while fetching course resources",
+      error: error.message,
+    });
+  }
+};
+
+const uploadCourseResource = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { title, description } = req.body;
+    const doctorId = req.body.doctorId;
+
+    console.log('Upload request received:', { courseId, doctorId, title, file: req.file ? 'yes' : 'no' });
+
+    if (!courseId || !doctorId || !title) {
+      return res.status(400).json({
+        status: "fail",
+        message: `Missing required fields. courseId: ${courseId}, doctorId: ${doctorId}, title: ${title}, file: ${req.file ? 'yes' : 'no'}`,
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        status: "fail",
+        message: "No file provided",
+      });
+    }
+
+    const file = req.file;
+
+    // url served by express.static("/uploads", ...)
+    const url = `/uploads/resources/${file.filename}`;
+
+    const result = await doctorService.uploadCourseResource(courseId, doctorId, {
+      title,
+      description,
+      fileName: file.originalname,
+      filePath: url,
+      fileType: file.mimetype.split('/')[0],
+      fileSize: file.size,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "Resource uploaded successfully",
+      data: result.data,
+    });
+  } catch (error) {
+    console.error("uploadCourseResource controller error:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// ===================== Course Staff (TAs) =====================
+const getCourseStaff = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    if (!courseId) {
+      return res.status(400).json({
+        status: "fail",
+        message: "courseId is required",
+      });
+    }
+
+    console.log(`Fetching staff for course ${courseId}`);
+
+    const result = await doctorService.getCourseStaff(courseId);
+
+    if (!result.success) {
+      console.error(`Error fetching staff: ${result.message}`);
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (error) {
+    console.error("Controller Error in getCourseStaff:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while fetching course staff",
+      error: error.message,
+    });
+  }
+};
+
+// ===================== Course Schedule =====================
+const getCourseSchedule = async (req, res) => {
+  try {
+    const { courseId, doctorId } = req.params;
+
+    if (!courseId || !doctorId) {
+      return res.status(400).json({
+        status: "fail",
+        message: "courseId and doctorId are required",
+      });
+    }
+
+    console.log(`Fetching schedule for course ${courseId}, doctor ${doctorId}`);
+
+    const result = await doctorService.getCourseSchedule(courseId, doctorId);
+
+    if (!result.success) {
+      console.error(`Error fetching schedule: ${result.message}`);
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (error) {
+    console.error("Controller Error in getCourseSchedule:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while fetching course schedule",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   bookClassroom,
@@ -239,4 +381,8 @@ module.exports = {
   updateAssignment,
   uploadAssignmentAttachment,
   getCourseStudents,
+  getCourseResources,
+  uploadCourseResource,
+  getCourseStaff,
+  getCourseSchedule,
 };

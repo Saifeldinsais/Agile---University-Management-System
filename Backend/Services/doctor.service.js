@@ -626,9 +626,196 @@ const doctorService = {
     }
   },
 
+  // ===================== Course Resources =====================
+  getCourseResources: async (courseId) => {
+    try {
+      if (!courseId) {
+        return { success: false, message: "courseId is required" };
+      }
 
+      const [resources] = await pool.query(
+        `SELECT resource_id, title, description, file_name, file_path, file_type, file_size, upload_date
+         FROM course_resources
+         WHERE course_id = ? AND is_active = TRUE
+         ORDER BY upload_date DESC`,
+        [courseId]
+      );
 
+      console.log(`Retrieved ${resources ? resources.length : 0} resources for course ${courseId}`);
 
+      return { success: true, data: resources || [] };
+    } catch (e) {
+      console.error("getCourseResources error:", e.message);
+      return { success: false, message: `Database error: ${e.message}` };
+    }
+  },
+
+  uploadCourseResource: async (courseId, doctorId, resourceData) => {
+    try {
+      const { title, description, fileName, filePath, fileType, fileSize } = resourceData;
+
+      if (!title) {
+        return { success: false, message: "Resource title is required" };
+      }
+
+      if (!courseId || !doctorId) {
+        return { success: false, message: "courseId and doctorId are required" };
+      }
+
+      console.log(`Uploading resource: ${title} to course ${courseId}`);
+
+      const [result] = await pool.query(
+        `INSERT INTO course_resources 
+         (course_id, doctor_id, title, description, file_name, file_path, file_type, file_size, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
+        [courseId, doctorId, title, description || null, fileName, filePath, fileType, fileSize || 0]
+      );
+
+      const [resource] = await pool.query(
+        `SELECT resource_id, title, description, file_name, file_path, file_type, file_size, upload_date
+         FROM course_resources
+         WHERE resource_id = ?`,
+        [result.insertId]
+      );
+
+      console.log(`Resource created with ID: ${result.insertId}`);
+
+      return { success: true, data: resource[0] };
+    } catch (e) {
+      console.error("uploadCourseResource error:", e.message);
+      return { success: false, message: `Database error: ${e.message}` };
+    }
+  },
+
+  // ===================== Course Staff (TAs) =====================
+  getCourseStaff: async (courseId) => {
+    try {
+      if (!courseId) {
+        return { success: false, message: "courseId is required" };
+      }
+
+      // Get assignments from assignment_entity (where admin stores course staff assignments)
+      const [assignments] = await pool.query(
+        `SELECT ae.entity_id, ae.staff_id, ae.created_at
+         FROM assignment_entity ae
+         WHERE ae.course_id = ? AND ae.staff_id IS NOT NULL
+         ORDER BY ae.created_at DESC`,
+        [courseId]
+      );
+
+      if (!assignments || assignments.length === 0) {
+        console.log(`[getCourseStaff] No assignments found for course ${courseId}`);
+        return { success: true, data: [] };
+      }
+
+      console.log(`[getCourseStaff] Found ${assignments.length} assignments for course ${courseId}`);
+
+      // Get staff details from EAV model for each assigned staff
+      const data = [];
+      for (const assignment of assignments) {
+        try {
+          const staffId = assignment.staff_id;
+          const assignmentId = assignment.entity_id;
+
+          // Get name attribute
+          const [nameAttr] = await pool.query(
+            `SELECT value_string FROM staff_entity_attribute 
+             WHERE entity_id = ? AND attribute_id = (
+               SELECT attribute_id FROM staff_attributes WHERE attribute_name = 'name' LIMIT 1
+             ) LIMIT 1`,
+            [staffId]
+          );
+
+          // Get email attribute
+          const [emailAttr] = await pool.query(
+            `SELECT value_string FROM staff_entity_attribute 
+             WHERE entity_id = ? AND attribute_id = (
+               SELECT attribute_id FROM staff_attributes WHERE attribute_name = 'email' LIMIT 1
+             ) LIMIT 1`,
+            [staffId]
+          );
+
+          // Get role from assignment attributes
+          const [roleAttr] = await pool.query(
+            `SELECT value_string FROM assignment_entity_attribute 
+             WHERE entity_id = ? AND attribute_id = (
+               SELECT attribute_id FROM assignment_attributes WHERE attribute_name = 'role' LIMIT 1
+             ) LIMIT 1`,
+            [assignmentId]
+          );
+
+          data.push({
+            assignmentId: assignmentId,
+            staffId: staffId,
+            role: roleAttr[0]?.value_string || "Teaching Assistant",
+            assignedDate: assignment.created_at,
+            name: nameAttr[0]?.value_string || "Unknown",
+            email: emailAttr[0]?.value_string || "",
+          });
+        } catch (e) {
+          console.error(`Error fetching details for staff ${assignment.staff_id}:`, e.message);
+          // Still add the assignment even if details fail
+          data.push({
+            assignmentId: assignment.entity_id,
+            staffId: assignment.staff_id,
+            role: "Teaching Assistant",
+            assignedDate: assignment.created_at,
+            name: "Unknown",
+            email: "",
+          });
+        }
+      }
+
+      console.log(`[getCourseStaff] Retrieved ${data.length} staff for course ${courseId}`);
+      return { success: true, data };
+    } catch (e) {
+      console.error("getCourseStaff error:", e.message);
+      return { success: false, message: `Database error: ${e.message}` };
+    }
+  },
+
+  // ===================== Course Schedule =====================
+  getCourseSchedule: async (courseId, doctorId) => {
+    try {
+      if (!courseId || !doctorId) {
+        return { success: false, message: "courseId and doctorId are required" };
+      }
+
+      const [schedule] = await pool.query(
+        `SELECT schedule_id, day_of_week, start_time, end_time, room_name, classroom_id, semester
+         FROM course_schedule
+         WHERE course_id = ? AND doctor_id = ? AND is_active = TRUE
+         ORDER BY 
+           CASE WHEN day_of_week = 'Monday' THEN 1
+                WHEN day_of_week = 'Tuesday' THEN 2
+                WHEN day_of_week = 'Wednesday' THEN 3
+                WHEN day_of_week = 'Thursday' THEN 4
+                WHEN day_of_week = 'Friday' THEN 5
+                WHEN day_of_week = 'Saturday' THEN 6
+                WHEN day_of_week = 'Sunday' THEN 7
+                ELSE 8 END,
+           start_time`,
+        [courseId, doctorId]
+      );
+
+      const data = schedule.map((s) => ({
+        scheduleId: s.schedule_id,
+        day: s.day_of_week,
+        startTime: s.start_time,
+        endTime: s.end_time,
+        room: s.room_name || "TBD",
+        classroomId: s.classroom_id,
+        semester: s.semester,
+      }));
+
+      console.log(`Retrieved ${data.length} schedule slots for course ${courseId}, doctor ${doctorId}`);
+
+      return { success: true, data };
+    } catch (e) {
+      console.error("getCourseSchedule error:", e.message);
+      return { success: false, message: `Database error: ${e.message}` };
+    }
+  },
 
 };
 
