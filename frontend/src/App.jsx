@@ -23,6 +23,9 @@ import CourseAssignments from "./pages/admin/CourseAssignments";
 
 import StudentDashboard from "./pages/student/Dashboard";
 import StudentHome from "./pages/student/Home";
+import StudentCourses from "./pages/student/Courses";
+import StudentAssessments from "./pages/student/Assessments";
+import StudentAnnouncements from "./pages/student/Announcements";
 
 import DoctorHome from "./pages/doctor/Home";
 import DoctorMyCourses from "./pages/doctor/MyCourses";
@@ -60,8 +63,14 @@ function App() {
       {/* Student PAGES */}
       <Route path="student" element={<StudentLayout />} >
         <Route path="dashboard" element={<StudentDashboard />} />
+        <Route path="courses" element={<StudentCourses />} />
+        <Route path="assessments" element={<StudentAssessments />} />
+        <Route path="announcements" element={<StudentAnnouncements />} />
         <Route path="facilities" element={<NotImplemented />} />
-        <Route index element={<StudentHome />} />
+        <Route path="staff-communication" element={<NotImplemented />} />
+        <Route path="office-hours" element={<NotImplemented />} />
+        <Route path="profile" element={<NotImplemented />} />
+        <Route index element={<StudentDashboard />} />
       </Route>
 
       {/* Doctor/Teacher PAGES */}
