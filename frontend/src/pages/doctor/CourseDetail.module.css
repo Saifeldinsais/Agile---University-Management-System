@@ -344,3 +344,56 @@
   font-size: 1.1rem;
   margin-bottom: 1rem;
 }
+
+.resourcesContainer {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.resourceCategory {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.categoryHeading {
+  font-weight: 800;
+  color: #0b5ed7;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+}
+
+.categoryDescription {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.filesList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.fileItem {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+}
+
+.fileLink {
+  color: #0b5ed7;
+  text-decoration: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fileLink:hover {
+  text-decoration: underline;
+  color: #0a58ca;
+}
+

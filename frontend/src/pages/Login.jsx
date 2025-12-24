@@ -51,9 +51,9 @@ function Login() {
       if (userType === "admin") {
         targetRoute = "/admin/dashboard";
       } else if (userType === "student") {
-        targetRoute = "/student/";
+        targetRoute = "/student/dashboard";
       } else if (userType === "doctor") {
-        targetRoute = "/doctor/";
+        targetRoute = "/doctor/dashboard";
       } else if (userType === "ta") {
         targetRoute = "/ta/dashboard";
       } else if (userType === "advisor") {

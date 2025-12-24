@@ -15,6 +15,7 @@ function DoctorCourseDetail() {
   const [error, setError] = useState(null);
 
   const [assignments, setAssignments] = useState([]);
+  const [resources, setResources] = useState([]);
 
   // add assignment
   const [showAddForm, setShowAddForm] = useState(false);
@@ -35,6 +36,7 @@ function DoctorCourseDetail() {
   useEffect(() => {
     fetchCourseDetail();
     fetchAssignments();
+    fetchResources();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
@@ -84,6 +86,30 @@ function DoctorCourseDetail() {
       console.error("Error fetching assignments:", err);
       setAssignments([]);
     }
+  };
+
+  const fetchResources = async () => {
+    try {
+      const response = await axios.get(`${API}/api/doctor/courses/${courseId}/resources`);
+      if (response.data.status === "success") {
+        setResources(response.data.data || []);
+      } else {
+        setResources([]);
+      }
+    } catch (err) {
+      console.error("Error fetching resources:", err);
+      setResources([]);
+    }
+  };
+
+  const groupResourcesByCategory = () => {
+    const grouped = {};
+    resources.forEach((res) => {
+      const cat = res.category || "Other";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(res);
+    });
+    return grouped;
   };
 
   const handleAddAssignment = async (e) => {
@@ -355,6 +381,40 @@ function DoctorCourseDetail() {
               </div>
             </form>
           )}
+
+          {/* Course Resources */}
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>Course Resources & Materials</div>
+
+            {resources.length === 0 ? (
+              <div className={styles.muted}>No resources uploaded yet.</div>
+            ) : (
+              <div className={styles.resourcesContainer}>
+                {Object.entries(groupResourcesByCategory()).map(([category, items]) => (
+                  <div className={styles.resourceCategory} key={category}>
+                    <div className={styles.categoryHeading}>{category}</div>
+                    {items[0]?.categoryDescription && (
+                      <div className={styles.categoryDescription}>{items[0].categoryDescription}</div>
+                    )}
+                    <div className={styles.filesList}>
+                      {items.map((res) => (
+                        <div className={styles.fileItem} key={res.resource_id}>
+                          <a
+                            className={styles.fileLink}
+                            href={`${API}${res.file_path}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            📄 {res.title || res.file_name}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Assignments */}
           <div className={styles.section}>
