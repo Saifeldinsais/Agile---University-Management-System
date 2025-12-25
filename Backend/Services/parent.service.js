@@ -488,26 +488,93 @@ const parentService = {
     },
 
     /**
-     * Get teachers associated with a parent's linked students
+     * Get teachers (doctors, TAs, advisors) associated with a parent's linked students' courses
      */
     async getAvailableTeachers(parentId) {
-        const [teachers] = await pool.query(
-            `SELECT DISTINCT 
-                se.entity_id as teacher_id,
-                se.entity_name as teacher_name,
-                se.entity_type
-             FROM parent_student_link psl
-             JOIN enrollment_entity_attribute eea ON eea.value_reference = psl.student_id
-             JOIN enrollment_attributes ea ON eea.attribute_id = ea.attribute_id AND ea.attribute_name = 'student_id'
-             JOIN enrollment_entity_attribute eea2 ON eea2.entity_id = eea.entity_id
-             JOIN enrollment_attributes ea2 ON eea2.attribute_id = ea2.attribute_id AND ea2.attribute_name = 'course_id'
-             JOIN course_entity_attribute cea ON cea.value_reference = eea2.value_reference
-             JOIN course_attributes ca ON cea.attribute_id = ca.attribute_id AND ca.attribute_name = 'instructor_id'
-             JOIN staff_entity se ON cea.value_reference = se.entity_id
-             WHERE psl.parent_id = ? AND psl.link_status = 'active'`,
+        console.log('[Parent Service] Getting available teachers for parent:', parentId);
+
+        // First, get all linked students
+        const [linkedStudents] = await pool.query(
+            `SELECT student_id FROM parent_student_link 
+             WHERE parent_id = ? AND link_status = 'active'`,
             [parentId]
         );
 
+        if (linkedStudents.length === 0) {
+            console.log('[Parent Service] No linked students found');
+            return [];
+        }
+
+        const studentIds = linkedStudents.map(s => s.student_id);
+        console.log('[Parent Service] Found linked students:', studentIds);
+
+        // Get all courses these students are enrolled in
+        const [enrollments] = await pool.query(
+            `SELECT DISTINCT eea.value_reference as course_id
+             FROM enrollment_entity ee
+             JOIN enrollment_entity_attribute eea ON ee.entity_id = eea.entity_id
+             JOIN enrollment_attributes ea ON eea.attribute_id = ea.attribute_id
+             WHERE ea.attribute_name = 'course_id'
+             AND ee.entity_id IN (
+                 SELECT entity_id FROM enrollment_entity_attribute eea2
+                 JOIN enrollment_attributes ea2 ON eea2.attribute_id = ea2.attribute_id
+                 WHERE ea2.attribute_name = 'student_id' 
+                 AND eea2.value_reference IN (?)
+             )`,
+            [studentIds]
+        );
+
+        if (enrollments.length === 0) {
+            console.log('[Parent Service] No course enrollments found, trying direct entity query');
+
+            // Fallback: Try to get all doctors/teachers directly from entities
+            const [allTeachers] = await pool.query(
+                `SELECT entity_id as teacher_id, entity_name as teacher_name, entity_type
+                 FROM entities 
+                 WHERE entity_type IN ('doctor', 'ta', 'advisor', 'teacher')
+                 ORDER BY entity_name`
+            );
+            console.log('[Parent Service] Found', allTeachers.length, 'teachers via fallback');
+            return allTeachers;
+        }
+
+        const courseIds = enrollments.map(e => e.course_id);
+        console.log('[Parent Service] Found enrolled courses:', courseIds);
+
+        // Get all instructors for these courses (doctors, TAs, advisors)
+        const [teachers] = await pool.query(
+            `SELECT DISTINCT 
+                e.entity_id as teacher_id,
+                e.entity_name as teacher_name,
+                e.entity_type,
+                (SELECT ea.value_string FROM entity_attribute ea 
+                 JOIN attributes a ON ea.attribute_id = a.attribute_id 
+                 WHERE ea.entity_id = e.entity_id AND a.attribute_name = 'email' LIMIT 1) as email
+             FROM entities e
+             JOIN entity_attribute ea ON e.entity_id = ea.entity_id
+             JOIN attributes a ON ea.attribute_id = a.attribute_id
+             WHERE a.attribute_name = 'course_id' 
+             AND ea.value_reference IN (?)
+             AND e.entity_type IN ('doctor', 'ta', 'advisor', 'teacher')
+             ORDER BY e.entity_name`,
+            [courseIds]
+        );
+
+        if (teachers.length === 0) {
+            console.log('[Parent Service] No teachers found via course assignment, trying direct query');
+
+            // Fallback: Get all doctors/teachers
+            const [allTeachers] = await pool.query(
+                `SELECT entity_id as teacher_id, entity_name as teacher_name, entity_type
+                 FROM entities 
+                 WHERE entity_type IN ('doctor', 'ta', 'advisor', 'teacher')
+                 ORDER BY entity_name`
+            );
+            console.log('[Parent Service] Found', allTeachers.length, 'teachers via fallback');
+            return allTeachers;
+        }
+
+        console.log('[Parent Service] Found', teachers.length, 'teachers for courses');
         return teachers;
     },
 
