@@ -1,0 +1,721 @@
+.coursesList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.courseCard {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 24px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.courseCard:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+}
+
+.courseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.courseHeader h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.badge {
+  background: #2563eb;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.courseTitle {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #555;
+  margin: 8px 0;
+}
+
+.courseDesc {
+  font-size: 0.9rem;
+  color: #777;
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.courseMeta {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.viewBtn {
+  width: 100%;
+  padding: 10px 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+  margin-top: 12px;
+}
+
+.viewBtn:hover {
+  transform: scale(1.02);
+}
+
+.detailsView {
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+}
+
+.backBtn {
+  padding: 8px 16px;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.backBtn:hover {
+  background: #e0e0e0;
+}
+
+.courseInfo {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.courseInfo h2 {
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.courseInfo p {
+  color: #666;
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.section {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 450px;
+  transition: all 0.3s ease;
+}
+
+.section:hover {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+  transform: translateY(-2px);
+}
+
+.section h3 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.sectionContent {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  padding-right: 8px;
+}
+
+.sectionContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sectionContent::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.sectionContent::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.sectionContent::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.sectionFooter {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #2563eb;
+  font-weight: 600;
+  padding: 8px 0;
+  border-top: 1px solid #e0e0e0;
+  margin-top: auto;
+}
+
+.studentList,
+.resourceList,
+.taList,
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.studentItem {
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #2563eb;
+}
+
+.studentName {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.studentEmail {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.resourceItem {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  align-items: center;
+}
+
+.resourceIcon {
+  font-size: 1.5rem;
+}
+
+.resourceInfo {
+  flex: 1;
+}
+
+.resourceName {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.resourceType {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.uploadBtn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 12px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.uploadBtn:hover {
+  background: #5568d3;
+}
+
+.scheduleItem {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  align-items: center;
+}
+
+.day {
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.time {
+  color: #333;
+  font-weight: 500;
+}
+
+.room {
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+}
+
+.noData {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
+
+.more {
+  text-align: center;
+  color: #2563eb;
+  font-weight: 600;
+  padding: 8px;
+}
+
+.container {
+  padding: 24px;
+}
+
+.container h1 {
+  margin-top: 0;
+  color: #333;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  color: #999;
+  padding: 32px;
+  font-size: 1.1rem;
+}
+
+/* Resource item enhancements */
+.resourceDesc {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 4px 0;
+  line-height: 1.3;
+}
+
+.resourceMeta {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  align-items: center;
+}
+
+.fileType {
+  background: #2563eb;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.fileSize {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.downloadBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #2563eb;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.downloadBtn:hover {
+  background: #1d4ed8;
+  transform: scale(1.05);
+}
+
+/* Teaching Assistant items */
+.taItem {
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #2563eb;
+}
+
+.taName {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.taRole {
+  font-size: 0.85rem;
+  color: #2563eb;
+  font-weight: 500;
+  margin: 4px 0;
+}
+
+.taEmail {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.sectionModal {
+  background: white;
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 700px;
+  width: 100%;
+  position: relative;
+  max-height: 85vh;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionModal h2 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.4rem;
+  padding-right: 40px;
+}
+
+.modalContentArea {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 12px;
+  margin-bottom: 16px;
+}
+
+.modalContentArea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalContentArea::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.modalContentArea::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.modalContentArea::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.studentItemLarge {
+  padding: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.studentItemLarge .studentName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.studentItemLarge .studentEmail {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.enrollDate {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 6px;
+}
+
+.resourceItemLarge {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.resourceItemLarge .resourceIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.resourceItemLarge .resourceInfo {
+  flex: 1;
+}
+
+.resourceItemLarge .resourceName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.resourceItemLarge .resourceDesc {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.uploadDate {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.taItemLarge {
+  padding: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  border-left: 4px solid #2563eb;
+}
+
+.taItemLarge .taName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.taItemLarge .taRole {
+  font-size: 0.9rem;
+  color: #2563eb;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.taItemLarge .taEmail {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.assignDate {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 6px;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 4px 8px;
+}
+
+.closeBtn:hover {
+  color: #333;
+}
+
+.modalContent h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.formGroup textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.cancelBtn,
+.submitBtn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.cancelBtn:hover {
+  background: #e0e0e0;
+}
+
+.submitBtn {
+  background: #2563eb;
+  color: white;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* File List Styles */
+.fileList {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.fileCount {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.fileList ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fileList li {
+  padding: 6px 0;
+  color: #666;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.fileList li:last-child {
+  border-bottom: none;
+}
+
+.fileList li:before {
+  content: "✓ ";
+  color: #2563eb;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+@media (max-width: 768px) {
+  .coursesList {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduleItem {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modalContent {
+    max-width: 90%;
+    max-height: 80vh;
+  }
+}
+

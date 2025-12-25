@@ -1,0 +1,276 @@
+.container {
+  padding: 24px;
+}
+
+.container h1 {
+  margin-top: 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.note {
+  background: #e3f2fd;
+  border-left: 4px solid #2563eb;
+  padding: 12px 16px;
+  border-radius: 4px;
+  color: #1976d2;
+  margin-bottom: 24px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 24px;
+}
+
+.sidebar {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  height: fit-content;
+}
+
+.sidebar h3 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.courseList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.courseItem {
+  padding: 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.courseItem:hover {
+  border-color: #2563eb;
+  background: #f9f9f9;
+}
+
+.courseItem.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.code {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.courseItem.active .count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.content {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.studentCount {
+  background: #2563eb;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.studentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.studentCard {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.studentCard:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.studentName {
+  font-weight: 700;
+  color: #333;
+  font-size: 1.05rem;
+}
+
+.engagement {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.engagement.high {
+  background: #d4edda;
+  color: #155724;
+}
+
+.engagement.medium {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.engagement.low {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.label {
+  font-weight: 600;
+  color: #666;
+  min-width: 80px;
+}
+
+.value {
+  color: #333;
+  flex: 1;
+  text-align: right;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.action {
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.viewBtn {
+  width: 100%;
+  padding: 10px;
+  background: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  cursor: not-allowed;
+  font-weight: 600;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.empty {
+  text-align: center;
+  color: #999;
+  padding: 64px 32px;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 200px 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    height: auto;
+  }
+
+  .courseList {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .courseItem {
+    flex-shrink: 0;
+    min-width: 120px;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .studentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+

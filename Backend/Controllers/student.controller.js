@@ -1,4 +1,7 @@
 const pool = require("../Db_config/DB");
+const doctorService = require("../Services/doctor.service");
+const studentService = require("../Services/student.service.js");
+const AssignmentService = require("../Services/assignment.service");
 
 /* -------------------- Helpers -------------------- */
 const ensureEnrollmentAttr = async (name, type) => {
@@ -21,6 +24,9 @@ const initEnrollmentAttributes = async () => {
   await ensureEnrollmentAttr("courseId", "int");   // Changed from "reference"
   await ensureEnrollmentAttr("status", "string");
   await ensureEnrollmentAttr("grade", "float");    // Changed from "decimal"
+  await ensureEnrollmentAttr("finalGrade", "float"); // Final grade after course completion
+  await ensureEnrollmentAttr("completionStatus", "string"); // 'completed', 'in-progress', 'failed'
+  await ensureEnrollmentAttr("completionDate", "string"); // Date when course was completed
 };
 
 const getEnrollmentAttrId = async (name) => {
@@ -161,6 +167,18 @@ const enrollCourse = async (req, res) => {
       [enrollmentId, gradeAttrId, null]
     );
 
+    // Emit real-time event for admin dashboard
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin").emit("enrollment-created", {
+        id: enrollmentId,
+        studentId: Number(studentId),
+        courseId: Number(courseId),
+        status: "PENDING",
+        createdAt: new Date().toISOString()
+      });
+    }
+
     return res.status(201).json({
       message: "Student enrolled successfully",
       enrollment: {
@@ -203,7 +221,9 @@ const viewEnrolled = async (req, res) => {
         vGrade.value_number AS grade,
 
         MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
-        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code
+        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
+        MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department,
+        MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits
 
       FROM enrollment_entity ee
       JOIN enrollment_entity_attribute vStudent
@@ -278,6 +298,18 @@ const dropCourse = async (req, res) => {
 
     await upsertEnrollmentValueString(enrollmentId, statusAttrId, "drop");
 
+    // Emit real-time event for admin dashboard
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin").emit("enrollment-drop-requested", {
+        enrollmentId,
+        studentId: Number(studentId),
+        courseId: Number(courseId),
+        status: "DROP",
+        requestedAt: new Date().toISOString()
+      });
+    }
+
     return res.status(200).json({
       message: "Course status updated to dropped",
       enrollmentId,
@@ -286,10 +318,373 @@ const dropCourse = async (req, res) => {
     return res.status(500).json({ message: "Error updating course status", error: error.message });
   }
 };
+const viewCourseAssignments = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    // (optional but recommended) security:
+    // 1) ensure req.user is student
+    // 2) ensure student is enrolled in this course before returning assignments
+
+    const result = await doctorService.getCourseAssignmentsForStudents(courseId);
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    return res.status(200).json({ assignments: result.data });
+  } catch (e) {
+    return res.status(500).json({ message: e.message });
+  }
+};
+
+// GET /student/staff/:staffId/office-hours
+const getStaffOfficeHours = async (req, res) => {
+  try {
+    const studentEntityId = req.user?.id;
+    if (!studentEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const { staffId } = req.params;
+
+    const result = await studentService.getOfficeHoursByStaffId(staffId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (e) {
+    console.error("getStaffOfficeHours controller error:", e);
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
+
+// POST /student/staff/:staffId/meeting-requests
+const createMeetingRequestForStaff = async (req, res) => {
+  try {
+    const studentEntityId = req.user?.id;
+    const studentName =
+      req.user?.name || req.user?.username || req.user?.email || "Student";
+
+    if (!studentEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const { staffId } = req.params;
+    const { reason, requestedDate, requestedTime } = req.body;
+
+    if (!reason?.trim()) {
+      return res.status(400).json({ status: "fail", message: "reason is required" });
+    }
+    if (!requestedDate || !requestedTime) {
+      return res.status(400).json({
+        status: "fail",
+        message: "requestedDate and requestedTime are required",
+      });
+    }
+
+    const result = await studentService.createMeetingRequestForStaff({
+      staffId,
+      studentEntityId,
+      studentName,
+      reason,
+      requestedDate,
+      requestedTime,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(201).json({
+      status: "success",
+      message: "Meeting request submitted",
+      data: result.data,
+    });
+  } catch (e) {
+    console.error("createMeetingRequestForStaff controller error:", e);
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
+
+
+// GET /student/meeting-requests
+const getMyMeetingRequests = async (req, res) => {
+  try {
+    const studentEntityId = req.user?.id;
+    if (!studentEntityId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    const result = await studentService.getMyMeetingRequests(studentEntityId);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", data: result.data });
+  } catch (e) {
+    console.error("getMyMeetingRequests controller error:", e);
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
+const getCourseInstructors = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    if (!courseId) return res.status(400).json({ message: "courseId is required" });
+
+    const result = await AssignmentService.getAssignmentsByCourse(courseId);
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    // keep only active + doctors/instructors (choose the roles you want)
+    const instructors = (result.data || [])
+      .filter(a => (a.status || "active") === "active")
+      .filter(a => ["doctor", "instructor"].includes(String(a.role || "").toLowerCase()))
+      .map(a => ({
+        staffId: a.staff?.id,
+        name: a.staff?.name,
+        email: a.staff?.email,
+        role: a.role,
+        department: a.staff?.department || a.department || "",
+      }));
+
+    return res.status(200).json({ status: "success", data: instructors });
+  } catch (e) {
+    console.error("getCourseInstructors error:", e);
+    return res.status(500).json({ message: e.message });
+  }
+};
+
+// Get completed courses with final grades and calculate GPA
+const getCompletedCoursesWithGrades = async (req, res) => {
+  try {
+    await initEnrollmentAttributes();
+    
+    const { studentId } = req.params;
+    if (!studentId) {
+      return res.status(400).json({ message: "studentId is required" });
+    }
+
+    const studentIdNum = Number(studentId);
+
+    // Get all enrollment attributes IDs
+    const studentAttrId = await getEnrollmentAttrId("studentId");
+    const courseAttrId = await getEnrollmentAttrId("courseId");
+    const finalGradeAttrId = await getEnrollmentAttrId("finalGrade");
+    const completionStatusAttrId = await getEnrollmentAttrId("completionStatus");
+    const completionDateAttrId = await getEnrollmentAttrId("completionDate");
+
+    if (!studentAttrId || !courseAttrId || !finalGradeAttrId || !completionStatusAttrId) {
+      return res.status(500).json({ message: "Enrollment attributes not found" });
+    }
+
+    // Get all completed enrollments for the student
+    const [enrollments] = await pool.query(`
+      SELECT 
+        ee.entity_id,
+        MAX(CASE WHEN ea.attribute_name='courseId' THEN eea.value_number END) AS courseId,
+        MAX(CASE WHEN ea.attribute_name='finalGrade' THEN eea.value_number END) AS finalGrade,
+        MAX(CASE WHEN ea.attribute_name='completionStatus' THEN eea.value_string END) AS completionStatus,
+        MAX(CASE WHEN ea.attribute_name='completionDate' THEN eea.value_string END) AS completionDate
+      FROM enrollment_entity ee
+      JOIN enrollment_entity_attribute eea ON ee.entity_id = eea.entity_id
+      JOIN enrollment_attributes ea ON eea.attribute_id = ea.attribute_id
+      WHERE ee.entity_id IN (
+        SELECT DISTINCT eea2.entity_id
+        FROM enrollment_entity_attribute eea2
+        JOIN enrollment_attributes ea2 ON eea2.attribute_id = ea2.attribute_id
+        WHERE ea2.attribute_name='studentId' AND eea2.value_number=?
+      )
+      AND ea.attribute_name IN ('courseId', 'finalGrade', 'completionStatus', 'completionDate')
+      GROUP BY ee.entity_id
+      HAVING completionStatus = 'completed' AND finalGrade IS NOT NULL
+    `, [studentIdNum]);
+
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(200).json({
+        completedCourses: [],
+        gpa: 0,
+        totalCredits: 0
+      });
+    }
+
+    // Fetch course details for completed enrollments
+    const courseIds = enrollments.map(e => e.courseId).filter(Boolean);
+    
+    let completedCourses = [];
+    let totalCredits = 0;
+    let totalGradePoints = 0;
+
+    if (courseIds.length > 0) {
+      const placeholders = courseIds.map(() => '?').join(',');
+      const [courses] = await pool.query(`
+        SELECT
+          ce.entity_id AS courseId,
+          MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
+          MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
+          MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits,
+          MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department
+        FROM course_entity ce
+        LEFT JOIN course_entity_attribute cea ON ce.entity_id = cea.entity_id
+        LEFT JOIN course_attributes ca ON cea.attribute_id = ca.attribute_id
+        WHERE ce.entity_id IN (${placeholders})
+        GROUP BY ce.entity_id
+      `, courseIds);
+
+      // Merge course details with enrollment grades
+      completedCourses = enrollments.map(enrollment => {
+        const course = courses.find(c => c.courseId === enrollment.courseId);
+        if (course) {
+          totalCredits += parseInt(course.credits) || 0;
+          totalGradePoints += (parseFloat(enrollment.finalGrade) || 0) * (parseInt(course.credits) || 0);
+        }
+        return {
+          enrollmentId: enrollment.entity_id,
+          courseId: enrollment.courseId,
+          title: course?.title || 'Unknown Course',
+          code: course?.code || '',
+          credits: course?.credits || 0,
+          department: course?.department || '',
+          finalGrade: parseFloat(enrollment.finalGrade) || 0,
+          completionDate: enrollment.completionDate,
+          completionStatus: enrollment.completionStatus
+        };
+      });
+    }
+
+    // Calculate GPA (weighted by credits)
+    const gpa = totalCredits > 0 
+      ? (totalGradePoints / totalCredits).toFixed(2)
+      : 0;
+
+    return res.status(200).json({
+      completedCourses,
+      gpa: parseFloat(gpa),
+      totalCredits
+    });
+
+  } catch (error) {
+    console.error("getCompletedCoursesWithGrades error:", error);
+    return res.status(500).json({ message: "Error fetching completed courses", error: error.message });
+  }
+};
+
+// Update student enrollment with final grade and mark as completed
+const updateEnrollmentWithFinalGrade = async (req, res) => {
+  try {
+    await initEnrollmentAttributes();
+    
+    const { enrollmentId, finalGrade, completionStatus } = req.body;
+    if (!enrollmentId || finalGrade === undefined || !completionStatus) {
+      return res.status(400).json({ message: "enrollmentId, finalGrade, and completionStatus are required" });
+    }
+
+    // Get attribute IDs
+    const finalGradeAttrId = await getEnrollmentAttrId("finalGrade");
+    const completionStatusAttrId = await getEnrollmentAttrId("completionStatus");
+    const completionDateAttrId = await getEnrollmentAttrId("completionDate");
+
+    if (!finalGradeAttrId || !completionStatusAttrId || !completionDateAttrId) {
+      return res.status(500).json({ message: "Enrollment attributes not found" });
+    }
+
+    // Check enrollment exists
+    const [[enrollment]] = await pool.query(
+      "SELECT entity_id FROM enrollment_entity WHERE entity_id=? LIMIT 1",
+      [enrollmentId]
+    );
+    if (!enrollment) {
+      return res.status(404).json({ message: "Enrollment not found" });
+    }
+
+    // Upsert finalGrade
+    const [[existingGrade]] = await pool.query(
+      "SELECT value_id FROM enrollment_entity_attribute WHERE entity_id=? AND attribute_id=? LIMIT 1",
+      [enrollmentId, finalGradeAttrId]
+    );
+
+    if (existingGrade) {
+      await pool.query(
+        "UPDATE enrollment_entity_attribute SET value_number=? WHERE value_id=?",
+        [finalGrade, existingGrade.value_id]
+      );
+    } else {
+      await pool.query(
+        "INSERT INTO enrollment_entity_attribute (entity_id, attribute_id, value_number) VALUES (?, ?, ?)",
+        [enrollmentId, finalGradeAttrId, finalGrade]
+      );
+    }
+
+    // Upsert completionStatus
+    const [[existingStatus]] = await pool.query(
+      "SELECT value_id FROM enrollment_entity_attribute WHERE entity_id=? AND attribute_id=? LIMIT 1",
+      [enrollmentId, completionStatusAttrId]
+    );
+
+    if (existingStatus) {
+      await pool.query(
+        "UPDATE enrollment_entity_attribute SET value_string=? WHERE value_id=?",
+        [completionStatus, existingStatus.value_id]
+      );
+    } else {
+      await pool.query(
+        "INSERT INTO enrollment_entity_attribute (entity_id, attribute_id, value_string) VALUES (?, ?, ?)",
+        [enrollmentId, completionStatusAttrId, completionStatus]
+      );
+    }
+
+    // Upsert completionDate if course is completed
+    if (completionStatus === 'completed') {
+      const completionDate = new Date().toISOString().split('T')[0];
+      const [[existingDate]] = await pool.query(
+        "SELECT value_id FROM enrollment_entity_attribute WHERE entity_id=? AND attribute_id=? LIMIT 1",
+        [enrollmentId, completionDateAttrId]
+      );
+
+      if (existingDate) {
+        await pool.query(
+          "UPDATE enrollment_entity_attribute SET value_string=? WHERE value_id=?",
+          [completionDate, existingDate.value_id]
+        );
+      } else {
+        await pool.query(
+          "INSERT INTO enrollment_entity_attribute (entity_id, attribute_id, value_string) VALUES (?, ?, ?)",
+          [enrollmentId, completionDateAttrId, completionDate]
+        );
+      }
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "Enrollment updated with final grade",
+      data: {
+        enrollmentId,
+        finalGrade,
+        completionStatus
+      }
+    });
+
+  } catch (error) {
+    console.error("updateEnrollmentWithFinalGrade error:", error);
+    return res.status(500).json({ message: "Error updating enrollment", error: error.message });
+  }
+};
 
 module.exports = {
   viewCourses,
   enrollCourse,
   viewEnrolled,
   dropCourse,
+  viewCourseAssignments,
+  getMyMeetingRequests,
+  createMeetingRequestForStaff,
+  getStaffOfficeHours,
+  getCourseInstructors,
+  getCompletedCoursesWithGrades,
+  updateEnrollmentWithFinalGrade
 };
