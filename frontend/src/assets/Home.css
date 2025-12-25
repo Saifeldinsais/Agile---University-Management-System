@@ -11,7 +11,7 @@
   color: white;
   text-align: center;
   margin-bottom: 40px;
-  box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .hero-title {
@@ -79,7 +79,7 @@
   padding: 25px 30px;
   border-radius: 10px;
   border-left: 6px solid #111827e2;
-  box-shadow: 0px 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .about-section h2 {
@@ -92,4 +92,70 @@
   line-height: 1.7;
   margin-bottom: 12px;
   color: #333;
+}
+
+/* Parent Link Styles */
+.parent-links {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.divider {
+  color: #a0aec0;
+  font-size: 0.9rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 200px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.divider::before {
+  margin-right: 1rem;
+}
+
+.divider::after {
+  margin-left: 1rem;
+}
+
+.btn-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.hero-btn.secondary {
+  background: rgba(102, 126, 234, 0.15);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  color: #fff;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.5rem;
+}
+
+.hero-btn.secondary:hover {
+  background: rgba(102, 126, 234, 0.25);
+  transform: translateY(-2px);
+}
+
+.hero-btn.outline {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #a0aec0;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.5rem;
+}
+
+.hero-btn.outline:hover {
+  border-color: #fff;
+  color: #fff;
+  transform: translateY(-2px);
 }

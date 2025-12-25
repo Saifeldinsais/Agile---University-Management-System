@@ -1,0 +1,567 @@
+/* Communication Module Styles */
+
+.comm-container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.comm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.comm-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.comm-loading {
+    text-align: center;
+    padding: 48px;
+    color: #6b7280;
+}
+
+/* Buttons */
+.comm-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.comm-btn.primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.comm-btn.primary:hover {
+    background: #4338ca;
+}
+
+.comm-btn.secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.comm-btn.secondary:hover {
+    background: #e5e7eb;
+}
+
+.comm-btn.danger {
+    background: #ef4444;
+    color: white;
+}
+
+.comm-btn.danger:hover {
+    background: #dc2626;
+}
+
+/* Content Layout */
+.comm-content {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    min-height: 500px;
+}
+
+/* Sidebar */
+.comm-sidebar {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.comm-sidebar h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.comm-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.comm-item {
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: background 0.15s;
+    position: relative;
+}
+
+.comm-item:hover {
+    background: #f9fafb;
+}
+
+.comm-item.active {
+    background: #eef2ff;
+    border-left: 3px solid #4f46e5;
+}
+
+.comm-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.comm-item-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.comm-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.comm-badge.doctor {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.comm-badge.ta {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.comm-badge.advisor {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.comm-item-subject {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.comm-item-preview {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.comm-unread {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #4f46e5;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.comm-empty {
+    text-align: center;
+    color: #9ca3af;
+    padding: 24px;
+}
+
+/* Messages Panel */
+.comm-messages {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.comm-messages-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.comm-messages-header h3 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+    color: #1f2937;
+}
+
+.comm-subject {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.comm-messages-list {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.comm-message {
+    max-width: 70%;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+}
+
+.comm-message.sent {
+    background: #4f46e5;
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+
+.comm-message.received {
+    background: #f3f4f6;
+    color: #1f2937;
+    border-bottom-left-radius: 4px;
+}
+
+.comm-message-content {
+    line-height: 1.5;
+}
+
+.comm-message-time {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 6px;
+}
+
+.comm-input-form {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.comm-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.comm-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+}
+
+.comm-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #9ca3af;
+    font-size: 1rem;
+}
+
+/* Tabs */
+.comm-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.comm-tab {
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+}
+
+.comm-tab:hover {
+    background: #f9fafb;
+}
+
+.comm-tab.active {
+    background: #4f46e5;
+    color: white;
+    border-color: #4f46e5;
+}
+
+/* Meeting Cards */
+.meeting-list {
+    display: grid;
+    gap: 16px;
+}
+
+.meeting-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.meeting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.meeting-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1f2937;
+}
+
+.meeting-badge {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-secondary {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.meeting-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.meeting-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.meeting-detail .label,
+.meeting-purpose .label,
+.meeting-notes .label,
+.meeting-rejection .label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.meeting-purpose p,
+.meeting-notes p,
+.meeting-rejection p {
+    margin: 4px 0 0;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.meeting-rejection {
+    background: #fef2f2;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.meeting-notes {
+    background: #f0fdf4;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.meeting-actions {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Modal */
+.comm-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.comm-modal {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.comm-modal h2 {
+    margin: 0 0 20px;
+    font-size: 1.25rem;
+    color: #1f2937;
+}
+
+.comm-form-group {
+    margin-bottom: 16px;
+}
+
+.comm-form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.comm-form-group input,
+.comm-form-group select,
+.comm-form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.comm-form-group input:focus,
+.comm-form-group select:focus,
+.comm-form-group textarea:focus {
+    outline: none;
+    border-color: #4f46e5;
+}
+
+.comm-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.comm-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+/* Online Status Dot */
+.online-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Typing Indicator */
+.typing-indicator {
+    padding: 12px 16px;
+    background: #f3f4f6;
+    border-radius: 12px;
+    color: #6b7280;
+    font-size: 0.85rem;
+    font-style: italic;
+    max-width: 200px;
+    margin-bottom: 16px;
+}
+
+.typing-indicator span::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+
+    0%,
+    20% {
+        content: '.';
+    }
+
+    40% {
+        content: '..';
+    }
+
+    60%,
+    100% {
+        content: '...';
+    }
+}
+
+/* Message Footer with Status */
+.comm-message-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.comm-message-status {
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
+
+.status-default {
+    opacity: 0.7;
+}
+
+.status-read {
+    color: #60a5fa;
+}
+
+/* Sent message status color */
+.comm-message.sent .comm-message-status {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.comm-message.sent .status-read {
+    color: #93c5fd;
+}
