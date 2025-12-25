@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import assignmentService from '../../services/assignmentService';
 import * as courseService from '../../services/courseService';
 import adminStaffService from '../../services/adminStaffService';
+import AdminSidebar from '../../components/AdminSidebar';
 import './CourseAssignments.css';
 import './dashboard.css';
 
@@ -181,7 +182,7 @@ function AssignmentModal({ isOpen, isEdit, onClose, onSubmit, assignment, course
     department: '',
     notes: '',
   });
-  
+
   const [staffSearches, setStaffSearches] = useState(['']);
   const [openDropdowns, setOpenDropdowns] = useState([false]);
 
@@ -291,25 +292,25 @@ function AssignmentModal({ isOpen, isEdit, onClose, onSubmit, assignment, course
     console.log('Search term:', searchTerm);
     console.log('Total staff available:', staff.length);
     console.log('Staff array:', staff);
-    
+
     if (staff.length === 0) {
       console.warn('No staff members loaded!');
       return [];
     }
-    
+
     const filtered = staff.filter((s) => {
       if (!s) {
         console.log('Null staff member encountered');
         return false;
       }
-      
+
       // Check all possible properties
       const emailMatch = s.email?.toLowerCase().includes(lowerSearch);
       const nameMatch = s.name?.toLowerCase().includes(lowerSearch);
       const idMatch = s.id?.toString().toLowerCase().includes(lowerSearch);
       const usernameMatch = s.username?.toLowerCase().includes(lowerSearch);
       const entityNameMatch = s.entity_name?.toLowerCase().includes(lowerSearch);
-      
+
       // Try common email patterns
       const constructedEmail1 = s.username ? `${s.username}@ums-doctor.com`.toLowerCase() : null;
       const constructedEmail2 = s.id ? `${s.id}@ums-doctor.com`.toLowerCase() : null;
@@ -318,9 +319,9 @@ function AssignmentModal({ isOpen, isEdit, onClose, onSubmit, assignment, course
         constructedEmail1,
         constructedEmail2,
       ].filter(Boolean);
-      
+
       const variantMatch = emailVariants.some(e => e?.includes(lowerSearch));
-      
+
       const matches = {
         email: emailMatch,
         name: nameMatch,
@@ -329,16 +330,16 @@ function AssignmentModal({ isOpen, isEdit, onClose, onSubmit, assignment, course
         entity_name: entityNameMatch,
         variant: variantMatch
       };
-      
+
       const hasMatch = Object.values(matches).some(v => v);
-      
+
       if (hasMatch) {
         console.log(`✓ MATCH: ${s.name || s.entity_name} (${s.email})`, matches);
       }
-      
+
       return hasMatch;
     });
-    
+
     console.log(`Results: ${filtered.length} matches out of ${staff.length} staff`);
     console.log('Filtered results:', filtered);
     console.log('=== END SEARCH DEBUG ===');
@@ -347,13 +348,13 @@ function AssignmentModal({ isOpen, isEdit, onClose, onSubmit, assignment, course
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Support multiple staff assignments
     // Filter out empty staff member entries
     const validStaffMembers = formData.staffMembers.filter(
       (member) => member.staffId && String(member.staffId).trim() !== ''
     );
-    
+
     if (validStaffMembers.length > 0) {
       onSubmit({
         courseId: formData.courseId,
@@ -431,7 +432,7 @@ function AssignmentModal({ isOpen, isEdit, onClose, onSubmit, assignment, course
             <label style={{ display: 'block', marginBottom: 12, fontSize: 14, fontWeight: 500 }}>
               Staff Members *
             </label>
-            
+
             {formData.staffMembers.map((member, index) => (
               <div
                 key={index}
@@ -694,7 +695,6 @@ function CourseAssignments() {
   const [isEdit, setIsEdit] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [staffMenuOpen, setStaffMenuOpen] = useState(true);
 
   // Fetch initial data
   useEffect(() => {
@@ -725,7 +725,7 @@ function CourseAssignments() {
         console.log('Full staffRes object:', staffRes);
         console.log('staffRes.data:', staffRes.data);
         console.log('staffRes.data?.staff:', staffRes.data?.staff);
-        
+
         // Try multiple ways to access the staff data
         let staffArray = [];
         if (Array.isArray(staffRes.data?.staff)) {
@@ -744,21 +744,21 @@ function CourseAssignments() {
             }
           }
         }
-        
+
         console.log('Raw staff data array:', staffArray);
         console.log('Staff count:', staffArray.length);
         if (staffArray.length > 0) {
           console.log('First staff member structure:', staffArray[0]);
         }
-        
+
         const filteredStaff = staffArray.filter((s) => {
           if (!s) return false;
           const roleStr = (s.role?.toLowerCase() || '').trim(); // TRIM whitespace!
           const rolesArray = s.roles ? (Array.isArray(s.roles) ? s.roles : []) : [];
-          
+
           const isDoctor = roleStr === 'doctor' || rolesArray.some(r => r?.toLowerCase().trim() === 'doctor');
           const isTA = roleStr === 'ta' || rolesArray.some(r => r?.toLowerCase().trim() === 'ta');
-          
+
           console.log(`Staff ${s.name} (${s.email}): role='${roleStr}', isDoctor=${isDoctor}, isTA=${isTA}`);
           return isDoctor || isTA;
         });
@@ -920,92 +920,7 @@ function CourseAssignments() {
 
   return (
     <div className="admin-page">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <h2 className="admin-logo">U-Manage</h2>
-        <nav className="admin-menu">
-          <button
-            className="menu-item"
-            onClick={() => navigate("/admin/dashboard")}
-          >
-            Dashboard
-          </button>
-          <button
-            className="menu-item"
-            onClick={() => navigate("/admin/facilities")}
-          >
-            Facilities
-          </button>
-          <button className="menu-item" onClick={() => navigate("/admin/curriculum")}>
-            Curriculum
-          </button>
-
-          {/* Staff Dropdown */}
-          <div>
-            <button
-              className="menu-item"
-              onClick={() => setStaffMenuOpen(!staffMenuOpen)}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}
-            >
-              Staff
-              <span style={{ fontSize: 10 }}>{staffMenuOpen ? "▼" : "▶"}</span>
-            </button>
-            {staffMenuOpen && (
-              <div style={{ paddingLeft: 16 }}>
-                <button className="menu-item" onClick={() => navigate("/admin/staff/directory")} style={{ fontSize: 13 }}>
-                  Directory
-                </button>
-                <button className="menu-item active" onClick={() => navigate("/admin/staff/assignments")} style={{ fontSize: 13 }}>
-                  Course Assignments
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button className="menu-item" onClick={() => navigate("/admin/enrollments")}>
-            Enrollments
-          </button>
-          <button className="menu-item" onClick={() => alert("Community soon")}>
-            Community
-          </button>
-        </nav>
-
-        {/* Logout button */}
-        <div style={{ marginTop: "auto", padding: "20px" }}>
-          <button
-            onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              localStorage.removeItem("student");
-              navigate("/login");
-            }}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: "none",
-              background: "rgba(239, 68, 68, 0.1)",
-              color: "#ef4444",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontWeight: 500,
-              transition: "all 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "rgba(239, 68, 68, 0.2)"}
-            onMouseOut={(e) => e.target.style.background = "rgba(239, 68, 68, 0.1)"}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Logout
-          </button>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main content */}
       <main className="admin-main">

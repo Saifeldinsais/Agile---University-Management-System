@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import adminStaffService from "../../services/adminStaffService";
 import socketService from "../../services/socketService";
 import TemporaryPasswordModal from "../../components/TemporaryPasswordModal";
+import AdminSidebar from "../../components/AdminSidebar";
 import "./dashboard.css";
 
 // Role badge colors
@@ -372,7 +373,6 @@ function AdminStaffDirectory() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [toast, setToast] = useState(null);
-    const [staffMenuOpen, setStaffMenuOpen] = useState(true);
 
     // Modal state
     const [selectedStaff, setSelectedStaff] = useState(null);
@@ -570,73 +570,7 @@ function AdminStaffDirectory() {
         <div className="admin-page">
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            {/* Sidebar */}
-            <aside className="admin-sidebar">
-                <h2 className="admin-logo">U-Manage</h2>
-                <nav className="admin-menu">
-                    <button className="menu-item" onClick={() => navigate("/admin/dashboard")}>Dashboard</button>
-                    <button className="menu-item" onClick={() => navigate("/admin/facilities")}>Facilities</button>
-                    <button className="menu-item" onClick={() => navigate("/admin/curriculum")}>Curriculum</button>
-
-                    {/* Staff Dropdown */}
-                    <div>
-                        <button
-                            className="menu-item"
-                            onClick={() => setStaffMenuOpen(!staffMenuOpen)}
-                            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}
-                        >
-                            Staff
-                            <span style={{ fontSize: 10 }}>{staffMenuOpen ? "▼" : "▶"}</span>
-                        </button>
-                        {staffMenuOpen && (
-                            <div style={{ paddingLeft: 16 }}>
-                                <button className="menu-item active" onClick={() => navigate("/admin/staff/directory")} style={{ fontSize: 13 }}>
-                                    Directory
-                                </button>
-                                <button className="menu-item" onClick={() => navigate("/admin/staff/assignments")} style={{ fontSize: 13 }}>
-                                    Course Assignments
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <button className="menu-item" onClick={() => navigate("/admin/enrollments")}>Enrollments</button>
-                    <button className="menu-item" onClick={() => alert("Community soon")}>Community</button>
-                </nav>
-
-                {/* Logout button */}
-                <div style={{ marginTop: "auto", padding: "20px" }}>
-                    <button
-                        onClick={() => {
-                            localStorage.removeItem("token");
-                            localStorage.removeItem("user");
-                            socketService.disconnect();
-                            navigate("/login");
-                        }}
-                        style={{
-                            width: "100%",
-                            padding: "12px 16px",
-                            borderRadius: 8,
-                            border: "none",
-                            background: "rgba(239, 68, 68, 0.1)",
-                            color: "#ef4444",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 8,
-                            fontWeight: 500,
-                        }}
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                        Logout
-                    </button>
-                </div>
-            </aside>
+            <AdminSidebar />
 
             {/* Main content */}
             <main className="admin-main">

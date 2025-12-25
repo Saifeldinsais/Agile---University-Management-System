@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "../../services/apiClient";
+import AdminSidebar from "../../components/AdminSidebar";
 import "./dashboard.css";
 
 function Dashboard() {
@@ -16,7 +17,6 @@ function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [staffMenuOpen, setStaffMenuOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -75,92 +75,7 @@ function Dashboard() {
 
   return (
     <div className="admin-page">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <h2 className="admin-logo">U-Manage</h2>
-        <nav className="admin-menu">
-          <button
-            className="menu-item active"
-            onClick={() => go("/admin/dashboard")}
-          >
-            Dashboard
-          </button>
-          <button
-            className="menu-item"
-            onClick={() => go("/admin/facilities")}
-          >
-            Facilities
-          </button>
-          <button className="menu-item" onClick={() => go("/admin/curriculum")}>
-            Curriculum
-          </button>
-
-          {/* Staff Dropdown */}
-          <div>
-            <button
-              className="menu-item"
-              onClick={() => setStaffMenuOpen(!staffMenuOpen)}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}
-            >
-              Staff
-              <span style={{ fontSize: 10 }}>{staffMenuOpen ? "▼" : "▶"}</span>
-            </button>
-            {staffMenuOpen && (
-              <div style={{ paddingLeft: 16 }}>
-                <button className="menu-item" onClick={() => go("/admin/staff/directory")} style={{ fontSize: 13 }}>
-                  Directory
-                </button>
-                <button className="menu-item" onClick={() => go("/admin/staff/assignments")} style={{ fontSize: 13 }}>
-                  Course Assignments
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button className="menu-item" onClick={() => go("/admin/enrollments")}>
-            Enrollments
-          </button>
-          <button className="menu-item" onClick={() => alert("Community soon")}>
-            Community
-          </button>
-        </nav>
-
-        {/* Logout button */}
-        <div style={{ marginTop: "auto", padding: "20px" }}>
-          <button
-            onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              localStorage.removeItem("student");
-              go("/login");
-            }}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: "none",
-              background: "rgba(239, 68, 68, 0.1)",
-              color: "#ef4444",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontWeight: 500,
-              transition: "all 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "rgba(239, 68, 68, 0.2)"}
-            onMouseOut={(e) => e.target.style.background = "rgba(239, 68, 68, 0.1)"}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Logout
-          </button>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main content */}
       <main className="admin-main">
@@ -176,11 +91,6 @@ function Dashboard() {
           </div>
 
           <div className="header-right">
-            {/* <input
-              type="search"
-              placeholder="Search…"
-              className="search-input"
-            /> */}
             <div className="admin-user">
               <div className="avatar">A</div>
               <div>
@@ -204,13 +114,13 @@ function Dashboard() {
           <div className="card">
             <p className="card-label">Halls</p>
             <h2 className="card-value">{loading ? "…" : stats.halls}</h2>
-            <p className="card-sub">mesh 3aref akteb eh hena</p>
+            <p className="card-sub">Lecture halls</p>
           </div>
 
           <div className="card">
             <p className="card-label">Labs</p>
             <h2 className="card-value">{loading ? "…" : stats.labs}</h2>
-            <p className="card-sub">w hena bardo</p>
+            <p className="card-sub">Computer labs</p>
           </div>
 
           <div className="card">
@@ -241,13 +151,13 @@ function Dashboard() {
               </button>
               <button
                 className="quick-btn"
-                onClick={() => alert("Staff module coming soon")}
+                onClick={() => go("/admin/staff/directory")}
               >
                 + Add Staff
               </button>
               <button
                 className="quick-btn"
-                onClick={() => alert("Announcements coming soon")}
+                onClick={() => go("/admin/announcements")}
               >
                 + Announcement
               </button>

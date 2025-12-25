@@ -29,12 +29,18 @@ function NavBarDoctor() {
         <NavLink to="/doctor/students" className={linkClass}>
           Students
         </NavLink>
+        <NavLink to="/doctor/student-messages" className={linkClass}>
+          Messages
+        </NavLink>
+        <NavLink to="/doctor/meeting-management" className={linkClass}>
+          Meetings
+        </NavLink>
         <NavLink to="/doctor/facilities" className={linkClass}>
           Facilities
         </NavLink>
       </nav>
       <div className="navbar-actions">
-        <button 
+        <button
           className="nav-link"
           onClick={handleLogout}
           style={{

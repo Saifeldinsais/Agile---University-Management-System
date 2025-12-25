@@ -22,14 +22,23 @@ function NavBarLogged() {
         <NavLink to="/student/announcements" className={linkClass}>
           Announcements
         </NavLink>
+        <NavLink to="/student/staff-communication" className={linkClass}>
+          Messages
+        </NavLink>
+        <NavLink to="/student/meeting-requests" className={linkClass}>
+          Meetings
+        </NavLink>
+        <NavLink to="/student/events" className={linkClass}>
+          Events
+        </NavLink>
         <NavLink to="/student/facilities" className={linkClass}>
           Facilities
         </NavLink>
       </nav>
       <div className="navbar-actions">
-        
+
         <NavLink to="/" className={linkClass}>
-            Log Out
+          Log Out
         </NavLink>
 
       </div>

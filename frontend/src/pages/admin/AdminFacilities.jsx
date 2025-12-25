@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "../../services/apiClient";
 import { API_BASE_URL } from "../../services/config";
+import AdminSidebar from "../../components/AdminSidebar";
 import "./dashboard.css";
 import TimeSlotModal from "../../components/TimeSlotModal";
 
@@ -96,7 +97,6 @@ function AdminFacilities() {
   const [modalMode, setModalMode] = useState("add");
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [editingSlot, setEditingSlot] = useState(null);
-  const [staffMenuOpen, setStaffMenuOpen] = useState(false);
 
   async function loadClassrooms() {
     setLoading(true);
@@ -104,14 +104,13 @@ function AdminFacilities() {
     try {
       const res = await apiClient.get("/admin/classrooms");
       console.log("Classrooms response:", res.data);
-      // Backend returns: { status, results, data: { classrooms: [...] } }
       const classroomsData = res.data.data?.classrooms || res.data?.classrooms || [];
       console.log("Setting classrooms to:", classroomsData);
       setClassrooms(Array.isArray(classroomsData) ? classroomsData : []);
     } catch (err) {
       console.error(err);
       setError("Failed to load classrooms");
-      setClassrooms([]); // Ensure it's always an array
+      setClassrooms([]);
     } finally {
       setLoading(false);
     }
@@ -224,90 +223,7 @@ function AdminFacilities() {
 
   return (
     <div className="admin-page">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <h2 className="admin-logo">U-Manage</h2>
-        <nav className="admin-menu">
-          <button
-            className="menu-item"
-            onClick={() => navigate("/admin/dashboard")}
-          >
-            Dashboard
-          </button>
-          <button
-            className="menu-item active"
-            onClick={() => navigate("/admin/facilities")}
-          >
-            Facilities
-          </button>
-          <button className="menu-item" onClick={() => navigate("/admin/curriculum")}>
-            Curriculum
-          </button>
-
-          {/* Staff Dropdown */}
-          <div>
-            <button
-              className="menu-item"
-              onClick={() => setStaffMenuOpen(!staffMenuOpen)}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}
-            >
-              Staff
-              <span style={{ fontSize: 10 }}>{staffMenuOpen ? "▼" : "▶"}</span>
-            </button>
-            {staffMenuOpen && (
-              <div style={{ paddingLeft: 16 }}>
-                <button className="menu-item" onClick={() => navigate("/admin/staff/directory")} style={{ fontSize: 13 }}>
-                  Directory
-                </button>
-                <button className="menu-item" onClick={() => navigate("/admin/staff/assignments")} style={{ fontSize: 13 }}>
-                  Course Assignments
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button className="menu-item" onClick={() => navigate("/admin/enrollments")}>
-            Enrollments
-          </button>
-          <button className="menu-item">Community</button>
-        </nav>
-
-        {/* Logout button */}
-        <div style={{ marginTop: "auto", padding: "20px" }}>
-          <button
-            onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              localStorage.removeItem("student");
-              navigate("/login");
-            }}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 8,
-              border: "none",
-              background: "rgba(239, 68, 68, 0.1)",
-              color: "#ef4444",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontWeight: 500,
-              transition: "all 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "rgba(239, 68, 68, 0.2)"}
-            onMouseOut={(e) => e.target.style.background = "rgba(239, 68, 68, 0.1)"}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Logout
-          </button>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main */}
       <main className="admin-main">
