@@ -19,6 +19,7 @@ const advisorRouter = require("./Routes/advisor.routes");
 const parentRouter = require("./Routes/parent.routes");
 const communicationRouter = require("./Routes/communication.routes");
 const announcementRouter = require("./Routes/announcement.routes");
+const eventRouter = require("./Routes/event.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -150,6 +151,7 @@ app.use("/api/advisor", advisorRouter);
 app.use("/api/parent", parentRouter);
 app.use("/api/communication", communicationRouter);
 app.use("/api/announcements", announcementRouter);
+app.use("/api/events", eventRouter);
 
 const Port = 5000;
 server.listen(Port, () => {

@@ -28,6 +28,9 @@ function NavBarLogged() {
         <NavLink to="/student/meeting-requests" className={linkClass}>
           Meetings
         </NavLink>
+        <NavLink to="/student/events" className={linkClass}>
+          Events
+        </NavLink>
         <NavLink to="/student/facilities" className={linkClass}>
           Facilities
         </NavLink>

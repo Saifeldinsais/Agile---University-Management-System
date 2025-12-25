@@ -22,6 +22,7 @@ import AdminEnrollments from "./pages/admin/AdminEnrollments";
 import AdminStaffDirectory from "./pages/admin/AdminStaffDirectory";
 import CourseAssignments from "./pages/admin/CourseAssignments";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
+import AdminEvents from "./pages/admin/AdminEvents";
 
 
 import StudentDashboard from "./pages/student/Dashboard";
@@ -31,6 +32,7 @@ import StudentAssessments from "./pages/student/Assessments";
 import StudentAnnouncements from "./pages/student/Announcements";
 import StaffCommunication from "./pages/student/StaffCommunication";
 import MeetingRequests from "./pages/student/MeetingRequests";
+import StudentEvents from "./pages/student/Events";
 
 import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 
@@ -87,6 +89,7 @@ function App() {
       <Route path="/admin/staff/directory" element={<AdminStaffDirectory />} />
       <Route path="/admin/staff/assignments" element={<CourseAssignments />} />
       <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+      <Route path="/admin/events" element={<AdminEvents />} />
 
 
       {/* Student PAGES */}
@@ -99,6 +102,7 @@ function App() {
         <Route path="staff-communication" element={<StaffCommunication />} />
         <Route path="meeting-requests" element={<MeetingRequests />} />
         <Route path="office-hours" element={<NotImplemented />} />
+        <Route path="events" element={<StudentEvents />} />
         <Route path="profile" element={<NotImplemented />} />
         <Route index element={<StudentDashboard />} />
       </Route>
