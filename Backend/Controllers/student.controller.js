@@ -321,11 +321,6 @@ const dropCourse = async (req, res) => {
 const viewCourseAssignments = async (req, res) => {
   try {
     const { courseId } = req.params;
-
-    // (optional but recommended) security:
-    // 1) ensure req.user is student
-    // 2) ensure student is enrolled in this course before returning assignments
-
     const result = await doctorService.getCourseAssignmentsForStudents(courseId);
 
     if (!result.success) {

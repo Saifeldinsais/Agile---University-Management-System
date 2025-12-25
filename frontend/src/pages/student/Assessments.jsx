@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import styles from "./StudentPages.module.css";
+import { API_BASE_URL } from "../../services/config";
 import assignmentSubmissionService from "../../services/assignmentSubmissionService";
 
 function Assessments() {
@@ -12,6 +13,19 @@ function Assessments() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Initialize student state from localStorage to ensure correct ID is used
+  const [student] = useState(() => {
+    const storedUser = localStorage.getItem("user") || localStorage.getItem("student");
+    if (!storedUser) return null;
+
+    try {
+      return JSON.parse(storedUser);
+    } catch (err) {
+      console.error("Failed to parse stored user:", err);
+      return null;
+    }
+  });
+
   useEffect(() => {
     document.title = 'Assessments & Grades - Performance Tracking';
   }, []);
@@ -23,14 +37,59 @@ function Assessments() {
   }, [activeTab]);
 
   const loadAssignments = async () => {
+    if (!student?.id) {
+      setError("No student session found.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+
     try {
-      const response = await assignmentSubmissionService.getStudentAssignments();
-      setAssignments(response.data || response.assignments || []);
+      // Step 1: Fetch enrolled courses for this student
+      const enrollRes = await fetch(`${API_BASE_URL}/student/enrolled/${student.id}`);
+      const enrollData = await enrollRes.json();
+      const enrolled = enrollData.courses || [];
+
+      // Step 2: Filter for approved courses only to get assignments
+      const approved = enrolled.filter(
+        (c) => c.status?.toLowerCase() === "approved"
+      );
+
+      if (approved.length === 0) {
+        setAssignments([]);
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: Fetch all assessment data for these approved courses
+      const responses = await Promise.all(
+        approved.map((c) =>
+          fetch(`${API_BASE_URL}/student/courses/${c.courseId}/assignments`)
+            .then((r) => r.json())
+            .catch(() => ({ assignments: [] }))
+        )
+      );
+
+      // Step 4: Flatten the data and filter for "assignment" type specifically
+      const allAssessments = responses.flatMap((r) => r.assignments || r.data || []);
+
+      const onlyAssignments = allAssessments
+        .filter((a) => {
+          // Default to "assignment" if type is missing, then filter specifically for it
+          const type = (a.type || "assignment").toLowerCase();
+          return type === "assignment"; 
+        })
+        .map((a) => ({
+          ...a,
+          assignment_id: a.assignmentId || a._id, // Support both potential ID formats
+          dueDate: a.dueDate || a.deadline
+        }));
+
+      setAssignments(onlyAssignments);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load assignments");
-      setAssignments([]);
+      console.error("Error loading assignments:", err);
+      setError("Failed to load assignments. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -67,7 +126,7 @@ function Assessments() {
       alert("Assignment submitted successfully!");
       setShowSubmitModal(false);
       setUploadedFile(null);
-      loadAssignments(); // Reload to update status
+      loadAssignments(); // Reload to update UI status
     } catch (err) {
       alert("Failed to submit assignment: " + (err.response?.data?.message || err.message));
     } finally {
