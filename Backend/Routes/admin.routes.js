@@ -13,14 +13,14 @@ router.delete("/classrooms/:roomId/timeslots/:slotId", adminController.deleteTim
 router.route('/classrooms')
   .post(adminController.createClassroom)  // DONE EAV MODEL
   .get(adminController.getClassrooms);  // DONE EAV MODEL
- 
+
 
 router.route('/classrooms/:id')
   .patch(adminController.updateClassroom) // DONE EAV MODEL
   .delete(adminController.deleteClassroom); // DONE EAV MODEL
 
-  router.route('/classrooms/:id/status')
-.get(adminController.getClassroomStatus) // DONE EAV MODEL
+router.route('/classrooms/:id/status')
+  .get(adminController.getClassroomStatus) // DONE EAV MODEL
 
 //==================== courses =====================  
 // router
@@ -40,12 +40,12 @@ router.delete("/courses/:id", courseController.deleteCourse); // DONE EAV MODEL
 //==================== assigning functions ====================
 
 router.route('/classroom/:id/assign')
-.post(adminController.assignClassroom)
-.delete(adminController.unassignClassroom)
+  .post(adminController.assignClassroom)
+  .delete(adminController.unassignClassroom)
 
 router.route('/courses/:id/doctor')
-.post(adminController.assignCourseToDoctor)
-.delete(adminController.unassignCourseFromDoctor)
+  .post(adminController.assignCourseToDoctor)
+  .delete(adminController.unassignCourseFromDoctor)
 
 
 //==================== enrollment requests ====================
@@ -55,8 +55,9 @@ router.patch('/enrollments/:student/reject', adminController.rejectEnrollments);
 //==================== get students ====================
 router.get('/students', adminController.getStudents); // DONE EAV MODEL
 
-
-
-
+//==================== Parent Requests ====================
+router.get('/parent-requests', adminController.getPendingParentRequests);
+router.patch('/parent-requests/:id/approve', adminController.approveParentRequest);
+router.patch('/parent-requests/:id/reject', adminController.rejectParentRequest);
 
 module.exports = router;

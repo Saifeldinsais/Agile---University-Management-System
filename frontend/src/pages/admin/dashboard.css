@@ -211,3 +211,135 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Parent Requests Section */
+.parent-requests-section {
+  margin-top: 8px;
+}
+
+.panel.full-width {
+  grid-column: 1 / -1;
+}
+
+.panel h3 .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.request-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.request-item:hover {
+  border-color: #2563eb;
+  background: #f0f9ff;
+}
+
+.request-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.request-users {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.request-users .arrow {
+  color: #9ca3af;
+}
+
+.request-users .parent-name {
+  color: #6366f1;
+}
+
+.request-users .student-name {
+  color: #10b981;
+}
+
+.request-details {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.request-details .relationship {
+  background: #e0e7ff;
+  color: #4f46e5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.approve-btn,
+.reject-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.approve-btn {
+  background: #10b981;
+  color: white;
+}
+
+.approve-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.reject-btn {
+  background: white;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+}
+
+.reject-btn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.no-requests {
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 20px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-top: 12px;
+}

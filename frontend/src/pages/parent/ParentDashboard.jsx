@@ -149,6 +149,10 @@ function ParentDashboard() {
             <section className="dashboard-section">
                 <h3>Quick Actions</h3>
                 <div className="quick-actions">
+                    <Link to="/parent/link-student" className="action-card highlight">
+                        <span className="action-icon">🔗</span>
+                        <span className="action-label">Link Student</span>
+                    </Link>
                     <Link to="/parent/messages" className="action-card">
                         <span className="action-icon">✉️</span>
                         <span className="action-label">Send Message</span>
@@ -160,6 +164,10 @@ function ParentDashboard() {
                     <Link to="/parent/announcements" className="action-card">
                         <span className="action-icon">📋</span>
                         <span className="action-label">Announcements</span>
+                    </Link>
+                    <Link to="/parent/events" className="action-card">
+                        <span className="action-icon">📅</span>
+                        <span className="action-label">Events</span>
                     </Link>
                     <Link to="/parent/profile" className="action-card">
                         <span className="action-icon">⚙️</span>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import parentService from "../../services/parentService";
 import "../../assets/Auth.css"; // Reuse existing auth styles
@@ -9,6 +9,14 @@ function ParentLogin() {
     const [password, setPassword] = useState("");
     const [status, setStatus] = useState("");
     const [statusType, setStatusType] = useState(""); // 'error', 'success'
+
+    // Clear any existing session when accessing parent login
+    useEffect(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("role");
+    }, []);
 
     async function handleSubmit(e) {
         e.preventDefault();

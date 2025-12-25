@@ -152,11 +152,13 @@ function Login() {
         </p>
       )}
 
-      {/* Staff Registration Notice */}
+      {/* Staff & Parent Notice */}
       <div className="staff-notice">
         <p>
           <strong>Staff Members:</strong> Doctor, TA, and Advisor accounts must be created by the administration.
-          If you need an account, please contact your department administrator.
+        </p>
+        <p style={{ marginTop: '8px', borderTop: '1px solid rgba(99, 102, 241, 0.2)', paddingTop: '8px' }}>
+          <strong>Parents:</strong> Please use the <a href="/parent/login" style={{ color: '#fff', textDecoration: 'underline' }}>Parent Portal Login</a>.
         </p>
       </div>
 
