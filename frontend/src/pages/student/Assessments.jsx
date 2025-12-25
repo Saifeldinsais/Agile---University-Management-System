@@ -10,6 +10,7 @@ function Assessments() {
   const [error, setError] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [currentSubmission, setCurrentSubmission] = useState(null); // New state for viewing submission
   const [uploadedFile, setUploadedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,12 +47,12 @@ function Assessments() {
     setError(null);
 
     try {
-      // Step 1: Fetch enrolled courses for this student
+      // Step 1: Fetch enrolled courses (same as Dashboard)
       const enrollRes = await fetch(`${API_BASE_URL}/student/enrolled/${student.id}`);
       const enrollData = await enrollRes.json();
       const enrolled = enrollData.courses || [];
 
-      // Step 2: Filter for approved courses only to get assignments
+      // Step 2: Filter for approved courses only
       const approved = enrolled.filter(
         (c) => c.status?.toLowerCase() === "approved"
       );
@@ -62,7 +63,7 @@ function Assessments() {
         return;
       }
 
-      // Step 3: Fetch all assessment data for these approved courses
+      // Step 3: Fetch assignments for each approved course
       const responses = await Promise.all(
         approved.map((c) =>
           fetch(`${API_BASE_URL}/student/courses/${c.courseId}/assignments`)
@@ -71,22 +72,36 @@ function Assessments() {
         )
       );
 
-      // Step 4: Flatten the data and filter for "assignment" type specifically
-      const allAssessments = responses.flatMap((r) => r.assignments || r.data || []);
+      // Step 4: Flatten and process assignments
+      const allAssignments = responses.flatMap((r) => r.assignments || r.data || []);
 
-      const onlyAssignments = allAssessments
-        .filter((a) => {
-          // Default to "assignment" if type is missing, then filter specifically for it
-          const type = (a.type || "assignment").toLowerCase();
-          return type === "assignment"; 
-        })
-        .map((a) => ({
+      // Step 5: Check submission status for each assignment
+      // 🚀 Optimization: Fetch all student submissions ONCE instead of inside the loop
+      let submissions = [];
+      try {
+        const submissionRes = await assignmentSubmissionService.getStudentAssignments();
+        submissions = submissionRes.data || submissionRes.assignments || [];
+      } catch (err) {
+        console.error("Failed to fetch submissions", err);
+      }
+
+      const assignmentsWithStatus = allAssignments.map((a) => {
+        // Find if this assignment has been submitted
+        const submission = submissions.find(
+          (sub) => String(sub.assignment_id) === String(a.assignmentId || a._id)
+        );
+
+        return {
           ...a,
-          assignment_id: a.assignmentId || a._id, // Support both potential ID formats
-          dueDate: a.dueDate || a.deadline
-        }));
+          assignment_id: a.assignmentId || a._id,
+          dueDate: a.dueDate || a.deadline,
+          status: a.status || 'active',
+          submission_status: submission?.submission_status || 'not_submitted',
+          submission_id: submission?.submission_id || submission?.entity_id || null // Ensure submission_id is passed
+        };
+      });
 
-      setAssignments(onlyAssignments);
+      setAssignments(assignmentsWithStatus);
     } catch (err) {
       console.error("Error loading assignments:", err);
       setError("Failed to load assignments. Please try again later.");
@@ -97,7 +112,25 @@ function Assessments() {
 
   const handleSubmitClick = (assignment) => {
     setSelectedAssignment(assignment);
+    setCurrentSubmission(null);
     setShowSubmitModal(true);
+  };
+
+  const handleViewSubmission = async (assignment) => {
+    if (!assignment.submission_id) return;
+
+    setSelectedAssignment(assignment);
+
+    try {
+      // Fetch submission details including files
+      const response = await assignmentSubmissionService.getSubmission(assignment.submission_id);
+      // Backend returns { status: 'success', data: submission }
+      const submissionData = response.data || response;
+      setCurrentSubmission(submissionData);
+      setShowSubmitModal(true);
+    } catch (err) {
+      alert("Failed to load submission details");
+    }
   };
 
   const handleFileChange = (e) => {
@@ -123,10 +156,16 @@ function Assessments() {
         formData
       );
 
-      alert("Assignment submitted successfully!");
+      // Close modal and reset state first for immediate feedback
       setShowSubmitModal(false);
       setUploadedFile(null);
-      loadAssignments(); // Reload to update UI status
+
+      // Show success message
+      alert("Assignment submitted successfully!");
+
+      // Reload assignments to update UI with submitted status
+      await loadAssignments();
+
     } catch (err) {
       alert("Failed to submit assignment: " + (err.response?.data?.message || err.message));
     } finally {
@@ -147,10 +186,10 @@ function Assessments() {
             <div className={styles.section}>
               <h2>Assessments & Performance</h2>
               <p style={{ color: '#6b7280' }}>
-                Track all course assessments including assignments, quizzes, and exams. 
+                Track all course assessments including assignments, quizzes, and exams.
                 View your submission status, grades, and instructor feedback once released.
               </p>
-              
+
               <div className={styles.featureList}>
                 <div className={styles.feature} onClick={() => setActiveTab("assignments")} style={{ cursor: 'pointer' }}>
                   <h3>📝 Assignments</h3>
@@ -174,7 +213,7 @@ function Assessments() {
             <div className={styles.section}>
               <h2>Privacy & Access</h2>
               <p style={{ color: '#6b7280' }}>
-                All assessments, grades, and feedback are strictly private and visible only to you. 
+                All assessments, grades, and feedback are strictly private and visible only to you.
                 No other student can view your grades or feedback.
               </p>
             </div>
@@ -197,7 +236,7 @@ function Assessments() {
           <div className={styles.section}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2>📝 My Assignments</h2>
-              <button 
+              <button
                 onClick={() => setActiveTab("overview")}
                 style={{ padding: '8px 16px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}
               >
@@ -207,7 +246,7 @@ function Assessments() {
 
             {loading && <p style={{ color: '#6b7280' }}>Loading assignments...</p>}
             {error && <p style={{ color: '#ef4444' }}>⚠️ {error}</p>}
-            
+
             {!loading && !error && assignments.length === 0 && (
               <p style={{ color: '#6b7280' }}>No assignments available at this time.</p>
             )}
@@ -217,10 +256,10 @@ function Assessments() {
                 {assignments.map((assignment) => {
                   const deadline = assignment.dueDate || assignment.deadline;
                   const isSubmitted = assignment.status === 'submitted' || assignment.submission_status === 'submitted';
-                  
+
                   return (
-                    <div 
-                      key={assignment.assignment_id} 
+                    <div
+                      key={assignment.assignment_id}
                       style={{
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
@@ -265,7 +304,24 @@ function Assessments() {
                           }}>
                             {isSubmitted ? '✓ Submitted' : '⏳ Not Submitted'}
                           </span>
-                          {!isSubmitted && (
+
+                          {isSubmitted ? (
+                            <button
+                              onClick={() => handleViewSubmission(assignment)}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#fff',
+                                border: '1px solid #d1d5db',
+                                color: '#374151',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '0.85em',
+                                fontWeight: '500'
+                              }}
+                            >
+                              View / Edit
+                            </button>
+                          ) : (
                             <button
                               onClick={() => handleSubmitClick(assignment)}
                               style={{
@@ -315,11 +371,33 @@ function Assessments() {
             width: '90%',
             boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
           }}>
-            <h2 style={{ marginTop: 0, marginBottom: '12px' }}>Submit Assignment</h2>
+            <h2 style={{ marginTop: 0, marginBottom: '12px' }}>
+              {currentSubmission ? 'Edit Submission' : 'Submit Assignment'}
+            </h2>
             <p style={{ color: '#6b7280', marginBottom: '16px' }}>
               {selectedAssignment.title}
             </p>
-            
+
+            {currentSubmission && currentSubmission.files && currentSubmission.files.length > 0 && (
+              <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9em', color: '#4b5563' }}>Current Submission:</h4>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {currentSubmission.files.map((file, idx) => (
+                    <div key={idx} style={{ fontSize: '0.9em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>📎</span>
+                      <span>{file.file_name}</span>
+                      <span style={{ color: '#6b7280', fontSize: '0.8em' }}>
+                        ({(file.file_size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.8em', color: '#ef4444', margin: '8px 0 0 0' }}>
+                  * Uploading a new file will replace the existing one(s).
+                </p>
+              </div>
+            )}
+
             <div style={{ marginBottom: '16px' }}>
               <label style={{
                 display: 'block',

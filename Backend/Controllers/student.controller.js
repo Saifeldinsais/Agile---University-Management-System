@@ -81,6 +81,34 @@ const upsertEnrollmentValueString = async (enrollmentId, attrId, valueString) =>
 
 /* -------------------- Controllers -------------------- */
 
+// 0) getStudentProfile
+const getStudentProfile = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const [rows] = await pool.query(
+      `SELECT 
+        e.entity_id,
+        MAX(CASE WHEN a.attribute_name='username' THEN ea.value_string END) AS username,
+        MAX(CASE WHEN a.attribute_name='email' THEN ea.value_string END) AS email
+      FROM entities e
+      LEFT JOIN entity_attribute ea ON e.entity_id = ea.entity_id
+      LEFT JOIN attributes a ON ea.attribute_id = a.attribute_id
+      WHERE e.entity_id = ? AND e.entity_type = 'student'
+      GROUP BY e.entity_id`,
+      [studentId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    return res.status(200).json({ user: rows[0] });
+  } catch (error) {
+    return res.status(500).json({ message: "Error fetching student profile", error: error.message });
+  }
+};
+
 // 1) viewCourses  (Course EAV)
 const viewCourses = async (req, res) => {
   try {
@@ -459,7 +487,7 @@ const getCourseInstructors = async (req, res) => {
 const getCompletedCoursesWithGrades = async (req, res) => {
   try {
     await initEnrollmentAttributes();
-    
+
     const { studentId } = req.params;
     if (!studentId) {
       return res.status(400).json({ message: "studentId is required" });
@@ -510,7 +538,7 @@ const getCompletedCoursesWithGrades = async (req, res) => {
 
     // Fetch course details for completed enrollments
     const courseIds = enrollments.map(e => e.courseId).filter(Boolean);
-    
+
     let completedCourses = [];
     let totalCredits = 0;
     let totalGradePoints = 0;
@@ -553,7 +581,7 @@ const getCompletedCoursesWithGrades = async (req, res) => {
     }
 
     // Calculate GPA (weighted by credits)
-    const gpa = totalCredits > 0 
+    const gpa = totalCredits > 0
       ? (totalGradePoints / totalCredits).toFixed(2)
       : 0;
 
@@ -573,7 +601,7 @@ const getCompletedCoursesWithGrades = async (req, res) => {
 const updateEnrollmentWithFinalGrade = async (req, res) => {
   try {
     await initEnrollmentAttributes();
-    
+
     const { enrollmentId, finalGrade, completionStatus } = req.body;
     if (!enrollmentId || finalGrade === undefined || !completionStatus) {
       return res.status(400).json({ message: "enrollmentId, finalGrade, and completionStatus are required" });
@@ -671,6 +699,7 @@ const updateEnrollmentWithFinalGrade = async (req, res) => {
 };
 
 module.exports = {
+  getStudentProfile,
   viewCourses,
   enrollCourse,
   viewEnrolled,

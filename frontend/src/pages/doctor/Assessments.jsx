@@ -30,6 +30,12 @@ function DoctorAssessments() {
     description: "",
   });
 
+  // Submissions modal state
+  const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+
   const authHeaders = () => ({ Authorization: `Bearer ${token}` });
   const jsonHeaders = () => ({
     "Content-Type": "application/json",
@@ -235,6 +241,52 @@ function DoctorAssessments() {
     });
   };
 
+  // Load submissions for an assignment
+  const loadSubmissions = async (assignmentId) => {
+    setLoadingSubmissions(true);
+    try {
+      const res = await fetch(
+        `${baseURL}/api/assignmentsubmission/assignment/${assignmentId}/submissions`,
+        { headers: authHeaders() }
+      );
+      const json = await safeJson(res);
+
+      if (!res.ok) throw new Error(json?.message || "Failed to load submissions");
+
+      // Fetch student details for each submission
+      const submissionsWithStudents = await Promise.all(
+        (json.data || []).map(async (sub) => {
+          try {
+            const studentRes = await fetch(
+              `${baseURL}/api/student/profile/${sub.student_id}`,
+              { headers: authHeaders() }
+            );
+            const studentData = await safeJson(studentRes);
+
+            return {
+              ...sub,
+              studentName: studentData?.user?.username || studentData?.username || `Student ${sub.student_id}`,
+              studentEmail: studentData?.user?.email || studentData?.email || 'N/A'
+            };
+          } catch (e) {
+            return {
+              ...sub,
+              studentName: `Student ${sub.student_id}`,
+              studentEmail: 'N/A'
+            };
+          }
+        })
+      );
+
+      setSubmissions(submissionsWithStudents);
+    } catch (err) {
+      alert(err.message || "Failed to load submissions");
+      setSubmissions([]);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
   const visible =
     selectedCourseId === ""
       ? assessments
@@ -379,13 +431,132 @@ function DoctorAssessments() {
                   <button className={styles.actionBtn} onClick={() => startEdit(a)}>
                     Edit
                   </button>
-                  <button className={styles.actionBtn} disabled>
+                  <button
+                    className={styles.actionBtn}
+                    onClick={() => {
+                      setSelectedAssignment(a);
+                      setShowSubmissionsModal(true);
+                      loadSubmissions(a.id);
+                    }}
+                  >
                     View Submissions
                   </button>
                 </div>
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* Submissions Modal */}
+      {showSubmissionsModal && selectedAssignment && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0 }}>Submissions: {selectedAssignment.title}</h2>
+              <button
+                onClick={() => {
+                  setShowSubmissionsModal(false);
+                  setSelectedAssignment(null);
+                  setSubmissions([]);
+                }}
+                style={{
+                  background: '#e5e7eb',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {loadingSubmissions ? (
+              <p style={{ color: '#6b7280' }}>Loading submissions...</p>
+            ) : submissions.length === 0 ? (
+              <p style={{ color: '#6b7280' }}>No submissions yet</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {submissions.map((sub, idx) => (
+                  <div key={sub.entity_id || idx} style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    backgroundColor: '#f9fafb'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <div>
+                        <h3 style={{ margin: '0 0 4px 0', fontSize: '16px' }}>
+                          {sub.studentName}
+                        </h3>
+                        <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
+                          {sub.studentEmail}
+                        </p>
+                      </div>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        backgroundColor: '#d1fae5',
+                        color: '#065f46'
+                      }}>
+                        Submitted
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+                      <strong>Student ID:</strong> {sub.student_id}
+                    </div>
+
+                    <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+                      <strong>Submitted:</strong> {sub.created_at ? new Date(sub.created_at).toLocaleString() : 'N/A'}
+                    </div>
+
+                    {/* Show files if available */}
+                    {sub.files && sub.files.length > 0 && (
+                      <div style={{ marginTop: '12px' }}>
+                        <strong style={{ fontSize: '14px' }}>Files:</strong>
+                        <div style={{ display: 'grid', gap: '8px', marginTop: '8px' }}>
+                          {sub.files.map((file, fileIdx) => (
+                            <div key={fileIdx} style={{
+                              padding: '8px 12px',
+                              backgroundColor: 'white',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '4px',
+                              fontSize: '14px'
+                            }}>
+                              📎 {file.file_name} ({(file.file_size / 1024).toFixed(1)} KB)
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

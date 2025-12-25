@@ -109,7 +109,8 @@ const assignmentSubmissionService = {
               totalMarks: assignment.totalMarks || null,
               created_at: assignment.created_at,
               status: (submission && submission.length > 0) ? submission[0].status : 'pending',
-              submission_status: (submission && submission.length > 0) ? 'submitted' : 'not_submitted'
+              submission_status: (submission && submission.length > 0) ? 'submitted' : 'not_submitted',
+              submission_id: (submission && submission.length > 0) ? submission[0].entity_id : null
             });
           } catch (assignmentError) {
             console.error("Error checking submission for assignment", assignment.entity_id, assignmentError);
