@@ -119,6 +119,51 @@ const createCourseAssignment = async (req, res) => {
     });
   }
 };
+// ===================== Create Course Quiz =====================
+const createCourseQuiz = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { doctorId, title, description, dueDate, totalMarks, type, status } = req.body;
+
+    if (!courseId || !doctorId || !title || !dueDate) {
+      return res.status(400).json({
+        status: "fail",
+        message: "courseId (param), doctorId, title, and dueDate are required",
+      });
+    }
+
+    const result = await doctorService.createCourseQuiz(doctorId, courseId, {
+      title,
+      description,
+      dueDate,
+      totalMarks,
+      type: type || "quiz",      
+      status: status || "active",      
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        status: "fail",
+        message: result.message,
+      });
+    }
+
+    return res.status(201).json({
+      status: "success",
+      message: "Quiz created successfully",
+      data: result.data, 
+    });
+  } catch (error) {
+    console.error("Controller Error in createCourseQuiz:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while creating assessment",
+      error: error.message,
+    });
+  }
+};
+
+
 
 
 // ===================== Get Course Assessments =====================
@@ -156,7 +201,41 @@ const getCourseAssignments = async (req, res) => {
     });
   }
 };
+const getCourseQuizzes = async (req, res) => {
+  try {
+    const { courseId } = req.params;
 
+    if (!courseId) {
+      return res.status(400).json({
+        status: "fail",
+        message: "courseId is required",
+      });
+    }
+
+    // Call the new service method we created in the previous step
+    const result = await doctorService.getCourseQuizzesForStudents(courseId);
+
+    if (!result.success) {
+      return res.status(400).json({
+        status: "fail",
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      count: result.data.length,
+      data: result.data,
+    });
+  } catch (error) {
+    console.error("Controller Error in getCourseQuizzes:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while fetching quizzes",
+      error: error.message,
+    });
+  }
+};
 
 // ===================== Update Assessment =====================
 // PUT /doctor/assessments/:assignmentId
@@ -188,6 +267,49 @@ const updateAssignment = async (req, res) => {
   }
 };
 
+// ===================== Update Quiz =====================
+const updateQuiz = async (req, res) => {
+  try {
+    const { quizId } = req.params; // Assuming your route is /quizzes/:quizId
+    const { doctorId, title, description, dueDate, totalMarks, type, status } = req.body;
+
+    if (!doctorId) {
+      return res.status(400).json({ 
+        status: "fail", 
+        message: "doctorId is required" 
+      });
+    }
+
+    // Call the quiz-specific service method
+    const result = await doctorService.updateCourseQuiz(doctorId, quizId, {
+      title,
+      description,
+      dueDate,
+      totalMarks,
+      type,     // e.g., 'quiz' or 'exam'
+      status,   // e.g., 'active' or 'archived'
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ 
+        status: "fail", 
+        message: result.message 
+      });
+    }
+
+    return res.status(200).json({ 
+      status: "success", 
+      message: "Quiz updated successfully" 
+    });
+  } catch (e) {
+    console.error("Controller Error in updateQuiz:", e);
+    return res.status(500).json({ 
+      status: "error", 
+      message: "An unexpected error occurred", 
+      error: e.message 
+    });
+  }
+};
 
 const uploadAssignmentAttachment = async (req, res) => {
   try {
@@ -607,4 +729,7 @@ module.exports = {
   getMeetingRequests,
   approveMeetingRequest,
   rejectMeetingRequest,
+  createCourseQuiz,
+  getCourseQuizzes,
+  updateQuiz,
 };

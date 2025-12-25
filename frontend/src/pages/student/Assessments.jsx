@@ -5,19 +5,17 @@ import assignmentSubmissionService from "../../services/assignmentSubmissionServ
 
 function Assessments() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [assignments, setAssignments] = useState([]);
+  const [assessments, setAssessments] = useState([]); // Renamed from assignments
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [selectedAssessment, setSelectedAssessment] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Initialize student state from localStorage to ensure correct ID is used
   const [student] = useState(() => {
     const storedUser = localStorage.getItem("user") || localStorage.getItem("student");
     if (!storedUser) return null;
-
     try {
       return JSON.parse(storedUser);
     } catch (err) {
@@ -31,12 +29,12 @@ function Assessments() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "assignments") {
-      loadAssignments();
+    if (activeTab === "assessments") { // Changed tab name
+      loadAssessments();
     }
   }, [activeTab]);
 
-  const loadAssignments = async () => {
+  const loadAssessments = async () => {
     if (!student?.id) {
       setError("No student session found.");
       return;
@@ -46,57 +44,65 @@ function Assessments() {
     setError(null);
 
     try {
-      // Step 1: Fetch enrolled courses for this student
+      // Step 1: Get enrolled & approved courses
       const enrollRes = await fetch(`${API_BASE_URL}/student/enrolled/${student.id}`);
       const enrollData = await enrollRes.json();
       const enrolled = enrollData.courses || [];
 
-      // Step 2: Filter for approved courses only to get assignments
       const approved = enrolled.filter(
         (c) => c.status?.toLowerCase() === "approved"
       );
 
       if (approved.length === 0) {
-        setAssignments([]);
+        setAssessments([]);
         setLoading(false);
         return;
       }
 
-      // Step 3: Fetch all assessment data for these approved courses
+      // Step 2: Fetch assessments from all approved courses
       const responses = await Promise.all(
         approved.map((c) =>
           fetch(`${API_BASE_URL}/student/courses/${c.courseId}/assignments`)
             .then((r) => r.json())
-            .catch(() => ({ assignments: [] }))
+            .catch(() => ({ assignments: [], data: [] }))
         )
       );
 
-      // Step 4: Flatten the data and filter for "assignment" type specifically
-      const allAssessments = responses.flatMap((r) => r.assignments || r.data || []);
+      // Step 3: Flatten and normalize
+      const allRawAssessments = responses.flatMap((r) => r.assignments || r.data || []);
 
-      const onlyAssignments = allAssessments
-        .filter((a) => {
-          // Default to "assignment" if type is missing, then filter specifically for it
-          const type = (a.type || "assignment").toLowerCase();
-          return type === "assignment"; 
-        })
-        .map((a) => ({
-          ...a,
-          assignment_id: a.assignmentId || a._id, // Support both potential ID formats
-          dueDate: a.dueDate || a.deadline
-        }));
+      const normalizedAssessments = allRawAssessments.map((a) => ({
+        ...a,
+        id: a.assignmentId || a._id || a.quizId,
+        title: a.title || a.name || "Untitled Assessment",
+        type: (a.type || "assignment").toLowerCase(), // "assignment" or "quiz"
+        dueDate: a.dueDate || a.deadline || a.startDate,
+        course_name: a.course_name || a.courseName,
+        description: a.description || a.instructions || "No description available",
+        totalMarks: a.totalMarks || a.marks || a.points,
+        status: a.status || a.submission_status, // submitted, graded, etc.
+        grade: a.grade || a.obtainedMarks,
+      }));
 
-      setAssignments(onlyAssignments);
+      // Optional: Sort by due date
+      normalizedAssessments.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+      setAssessments(normalizedAssessments);
     } catch (err) {
-      console.error("Error loading assignments:", err);
-      setError("Failed to load assignments. Please try again later.");
+      console.error("Error loading assessments:", err);
+      setError("Failed to load assessments. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmitClick = (assignment) => {
-    setSelectedAssignment(assignment);
+  const handleSubmitClick = (assessment) => {
+    if (assessment.type === "quiz") {
+      alert("Quiz taking feature coming soon!");
+      // Later: navigate to /quiz/:id or open quiz modal
+      return;
+    }
+    setSelectedAssessment(assessment);
     setShowSubmitModal(true);
   };
 
@@ -119,19 +125,26 @@ function Assessments() {
       formData.append('files', uploadedFile);
 
       await assignmentSubmissionService.submitAssignment(
-        selectedAssignment.assignment_id,
+        selectedAssessment.id,
         formData
       );
 
       alert("Assignment submitted successfully!");
       setShowSubmitModal(false);
       setUploadedFile(null);
-      loadAssignments(); // Reload to update UI status
+      loadAssessments();
     } catch (err) {
-      alert("Failed to submit assignment: " + (err.response?.data?.message || err.message));
+      alert("Failed to submit: " + (err.response?.data?.message || err.message));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const getTypeBadge = (type) => {
+    if (type === "quiz") {
+      return { text: "Quiz", color: "#a78bfa", bg: "#f3e8ff" };
+    }
+    return { text: "Assignment", color: "#1e40af", bg: "#dbeafe" };
   };
 
   return (
@@ -147,57 +160,55 @@ function Assessments() {
             <div className={styles.section}>
               <h2>Assessments & Performance</h2>
               <p style={{ color: '#6b7280' }}>
-                Track all course assessments including assignments, quizzes, and exams. 
-                View your submission status, grades, and instructor feedback once released.
+                Track all course assessments including assignments, quizzes, and exams.
               </p>
-              
+
               <div className={styles.featureList}>
-                <div className={styles.feature} onClick={() => setActiveTab("assignments")} style={{ cursor: 'pointer' }}>
-                  <h3>📝 Assignments</h3>
-                  <p>View assignment deadlines and submission status</p>
+                <div
+                  className={styles.feature}
+                  onClick={() => setActiveTab("assessments")}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <h3>📝 Assignments & Quizzes</h3>
+                  <p>View deadlines, submit work, and take quizzes</p>
                 </div>
                 <div className={styles.feature}>
-                  <h3>✅ Quizzes & Exams</h3>
-                  <p>Track quiz and exam schedules</p>
+                  <h3>✅ Exams</h3>
+                  <p>Track exam schedules (coming soon)</p>
                 </div>
                 <div className={styles.feature}>
                   <h3>⭐ Grades</h3>
-                  <p>View released grades with detailed breakdowns</p>
-                </div>
-                <div className={styles.feature}>
-                  <h3>💬 Feedback</h3>
-                  <p>Read instructor feedback per assessment</p>
+                  <p>View released grades and feedback</p>
                 </div>
               </div>
             </div>
 
+            {/* Other sections unchanged */}
             <div className={styles.section}>
               <h2>Privacy & Access</h2>
               <p style={{ color: '#6b7280' }}>
-                All assessments, grades, and feedback are strictly private and visible only to you. 
-                No other student can view your grades or feedback.
+                All assessments, grades, and feedback are strictly private and visible only to you.
               </p>
             </div>
 
             <div className={styles.section}>
               <h2>Features Coming Soon</h2>
               <ul style={{ color: '#6b7280', lineHeight: '1.8' }}>
-                <li>✓ View all course assessments</li>
-                <li>✓ Track submission deadlines</li>
+                <li>✓ View assignments and quizzes</li>
                 <li>✓ Submit assignments</li>
-                <li>✓ View released grades</li>
-                <li>✓ Read instructor feedback</li>
-                <li>✓ Performance analytics and trends</li>
+                <li>✓ Take online quizzes</li>
+                <li>✓ View grades and feedback</li>
+                <li>✓ Performance analytics</li>
               </ul>
             </div>
           </>
         )}
 
-        {activeTab === "assignments" && (
+        {activeTab === "assessments" && (
           <div className={styles.section}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2>📝 My Assignments</h2>
-              <button 
+              <h2>📚 My Assessments</h2>
+              <button
                 onClick={() => setActiveTab("overview")}
                 style={{ padding: '8px 16px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}
               >
@@ -205,22 +216,23 @@ function Assessments() {
               </button>
             </div>
 
-            {loading && <p style={{ color: '#6b7280' }}>Loading assignments...</p>}
+            {loading && <p style={{ color: '#6b7280' }}>Loading assessments...</p>}
             {error && <p style={{ color: '#ef4444' }}>⚠️ {error}</p>}
-            
-            {!loading && !error && assignments.length === 0 && (
-              <p style={{ color: '#6b7280' }}>No assignments available at this time.</p>
+
+            {!loading && !error && assessments.length === 0 && (
+              <p style={{ color: '#6b7280' }}>No assignments or quizzes available at this time.</p>
             )}
 
-            {!loading && !error && assignments.length > 0 && (
+            {!loading && !error && assessments.length > 0 && (
               <div style={{ display: 'grid', gap: '16px' }}>
-                {assignments.map((assignment) => {
-                  const deadline = assignment.dueDate || assignment.deadline;
-                  const isSubmitted = assignment.status === 'submitted' || assignment.submission_status === 'submitted';
-                  
+                {assessments.map((item) => {
+                  const badge = getTypeBadge(item.type);
+                  const isSubmitted = item.status === 'submitted' || item.submission_status === 'submitted';
+                  const hasGrade = item.grade !== undefined && item.grade !== null;
+
                   return (
-                    <div 
-                      key={assignment.assignment_id} 
+                    <div
+                      key={item.id}
                       style={{
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
@@ -231,57 +243,90 @@ function Assessments() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div style={{ flex: 1 }}>
-                          <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
-                            {assignment.title || 'Assignment'}
-                          </h3>
-                          {assignment.course_name && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <h3 style={{ margin: 0, color: '#1f2937' }}>
+                              {item.title}
+                            </h3>
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.8em',
+                              fontWeight: '600',
+                              backgroundColor: badge.bg,
+                              color: badge.color
+                            }}>
+                              {badge.text}
+                            </span>
+                          </div>
+
+                          {item.course_name && (
                             <p style={{ color: '#6b7280', fontSize: '0.9em', margin: '4px 0' }}>
-                              <strong>Course:</strong> {assignment.course_name}
+                              <strong>Course:</strong> {item.course_name}
                             </p>
                           )}
+
                           <p style={{ color: '#6b7280', margin: '8px 0', lineHeight: '1.6' }}>
-                            {assignment.description || 'No description provided'}
+                            {item.description}
                           </p>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                            <p style={{ color: '#6b7280', fontSize: '0.9em', margin: '0' }}>
-                              <strong>Deadline:</strong> {deadline ? new Date(deadline).toLocaleString() : 'No deadline'}
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                            <p style={{ color: '#6b7280', fontSize: '0.9em', margin: 0 }}>
+                              <strong>Due:</strong> {item.dueDate ? new Date(item.dueDate).toLocaleString() : 'No deadline'}
                             </p>
-                            {assignment.totalMarks && (
-                              <p style={{ color: '#6b7280', fontSize: '0.9em', margin: '0' }}>
-                                <strong>Total Marks:</strong> {assignment.totalMarks}
+                            {item.totalMarks && (
+                              <p style={{ color: '#6b7280', fontSize: '0.9em', margin: 0 }}>
+                                <strong>Worth:</strong> {item.totalMarks} marks
+                              </p>
+                            )}
+                            {hasGrade && (
+                              <p style={{ color: '#059669', fontSize: '0.9em', margin: 0, fontWeight: '600' }}>
+                                <strong>Grade:</strong> {item.grade} / {item.totalMarks}
                               </p>
                             )}
                           </div>
                         </div>
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                          <span style={{
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            fontSize: '0.85em',
-                            fontWeight: '500',
-                            backgroundColor: isSubmitted ? '#d1fae5' : '#fef3c7',
-                            color: isSubmitted ? '#065f46' : '#78350f',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {isSubmitted ? '✓ Submitted' : '⏳ Not Submitted'}
-                          </span>
-                          {!isSubmitted && (
-                            <button
-                              onClick={() => handleSubmitClick(assignment)}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#3b82f6',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '0.85em',
-                                fontWeight: '500'
-                              }}
-                            >
-                              Submit
-                            </button>
+                          {item.type === "assignment" && (
+                            <span style={{
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              fontSize: '0.85em',
+                              fontWeight: '500',
+                              backgroundColor: isSubmitted ? '#d1fae5' : '#fef3c7',
+                              color: isSubmitted ? '#065f46' : '#78350f'
+                            }}>
+                              {isSubmitted ? '✓ Submitted' : '⏳ Not Submitted'}
+                            </span>
                           )}
+
+                          {item.type === "quiz" && (
+                            <span style={{
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              fontSize: '0.85em',
+                              fontWeight: '500',
+                              backgroundColor: '#e0e7ff',
+                              color: '#4338ca'
+                            }}>
+                              👆 Click to Start
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => handleSubmitClick(item)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {item.type === "quiz" ? "Take Quiz" : isSubmitted ? "View Submission" : "Submit"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -293,96 +338,20 @@ function Assessments() {
         )}
       </div>
 
-      {/* Submit Assignment Modal */}
-      {showSubmitModal && selectedAssignment && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
-          }}>
-            <h2 style={{ marginTop: 0, marginBottom: '12px' }}>Submit Assignment</h2>
-            <p style={{ color: '#6b7280', marginBottom: '16px' }}>
-              {selectedAssignment.title}
-            </p>
-            
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontWeight: '500',
-                color: '#374151'
-              }}>
-                Select File (PDF, Image, or Document)
-              </label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
-                onChange={handleFileChange}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              />
-              {uploadedFile && (
-                <p style={{ color: '#059669', fontSize: '0.9em', marginTop: '8px' }}>
-                  ✓ Selected: {uploadedFile.name}
-                </p>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowSubmitModal(false);
-                  setUploadedFile(null);
-                }}
-                disabled={submitting}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#e5e7eb',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  opacity: submitting ? 0.6 : 1
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitAssignment}
-                disabled={submitting || !uploadedFile}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  fontWeight: '500',
-                  opacity: submitting || !uploadedFile ? 0.6 : 1
-                }}
-              >
-                {submitting ? 'Submitting...' : 'Submit Assignment'}
+      {/* Submit Modal - Only for Assignments */}
+      {showSubmitModal && selectedAssessment && selectedAssessment.type === "assignment" && (
+        // ... (same modal code as before)
+        <div style={{ /* modal overlay */ }}>
+          <div style={{ /* modal content */ }}>
+            <h2>Submit Assignment</h2>
+            <p>{selectedAssessment.title}</p>
+            {/* File upload input */}
+            <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.jpg,.png" />
+            {uploadedFile && <p>✓ Selected: {uploadedFile.name}</p>}
+            <div>
+              <button onClick={() => { setShowSubmitModal(false); setUploadedFile(null); }}>Cancel</button>
+              <button onClick={handleSubmitAssignment} disabled={submitting || !uploadedFile}>
+                {submitting ? 'Submitting...' : 'Submit'}
               </button>
             </div>
           </div>
