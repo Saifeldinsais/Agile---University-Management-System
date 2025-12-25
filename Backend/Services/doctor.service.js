@@ -3,6 +3,7 @@ const ClassroomValue = require("../EAV models/classroom_value");
 const ClassroomAttribute = require("../EAV models/classroom_attribute");
 const ClassroomEntity = require("../EAV models/classroom_entity");
 const EnrollmentAttribute = require("../EAV models/enrollment_attribute");
+const staffEntity = require("../EAV models/staff_entity");
 
 const pool = require("../Db_config/DB");
 
@@ -265,11 +266,13 @@ const doctorService = {
         return { success: false, message: "Doctor email not found in entity attributes" };
       }
 
-      // 3️⃣ Map email → staff_entity
       const rawEmail = String(emailRow.email || "").trim().toLowerCase();
+      console.log(`[getDoctorCourses] Doctor ${entityId} email: ${rawEmail}`);
+
+      // 3️⃣ Map email → staff_entity
       const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
 
-      const [[staff]] = await pool.query(
+      let [[staff]] = await pool.query(
         `
       SELECT entity_id
       FROM staff_entity
@@ -280,15 +283,32 @@ const doctorService = {
         [rawEmail, staffEmail]
       );
 
+      // If staff_entity doesn't exist, create it automatically
       if (!staff) {
-        return {
-          success: false,
-          message: `Doctor is not registered as staff (searched: ${rawEmail} / ${staffEmail})`,
-        };
+        console.warn(`[getDoctorCourses] No staff_entity found for ${rawEmail}, attempting to create one...`);
+        try {
+          const newStaffId = await staffEntity.create('doctor', staffEmail);
+          console.log(`[getDoctorCourses] Auto-created staff_entity ${newStaffId} for doctor ${entityId}`);
+          staff = { entity_id: newStaffId };
+        } catch (createError) {
+          console.error(`[getDoctorCourses] Failed to auto-create staff_entity:`, createError.message);
+          
+          // Log available staff entities for debugging
+          const [allStaff] = await pool.query(
+            `SELECT entity_id, entity_name FROM staff_entity LIMIT 5`
+          );
+          console.warn(`[getDoctorCourses] Available staff entities (sample):`, allStaff);
+          
+          return {
+            success: false,
+            message: `Doctor is not registered as staff. Please contact your administrator to set up your staff account. (Email: ${rawEmail})`,
+            code: "STAFF_NOT_SETUP"
+          };
+        }
       }
 
-
       const staffId = staff.entity_id;
+      console.log(`[getDoctorCourses] Using staff_id ${staffId} for doctor ${entityId}`);
 
       // 4️⃣ Fetch assigned courses
       const [rows] = await pool.query(
@@ -313,6 +333,7 @@ const doctorService = {
         [staffId]
       );
 
+      console.log(`[getDoctorCourses] Found ${rows.length} courses for doctor ${entityId}`);
       return { success: true, data: rows };
     } catch (error) {
       console.error("getDoctorCourses error:", error);

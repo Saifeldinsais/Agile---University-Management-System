@@ -1,6 +1,8 @@
 const entity = require("../EAV models/user_entity");
 const attribute = require("../EAV models/user_attribute");
 const value = require("../EAV models/user_value");
+const staffEntity = require("../EAV models/staff_entity");
+const staffAttribute = require("../EAV models/staff_attribute");
 const bcrypt = require("bcryptjs");
 const JWT = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -246,7 +248,7 @@ const userAuthService = {
             const tempPassword = generateTemporaryPassword();
             const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-            // Create entity
+            // Create entity in entities table
             const userId = await entity.create(normalizedRole, username);
 
             // Get attribute IDs
@@ -265,11 +267,30 @@ const userAuthService = {
             await setAttrValue(userId, 'mustChangePassword', 'true');
             await setAttrValue(userId, 'accountStatus', 'active');
 
+            // For staff roles (doctor, ta, advisor), also create a staff_entity
+            let staffId = null;
+            if (ADMIN_PROVISIONED_ROLES.includes(normalizedRole)) {
+                try {
+                    // Create staff entity with email as the entity_name for easy lookup
+                    const staffName = `staff-${email}`;
+                    staffId = await staffEntity.create(normalizedRole, staffName);
+                    
+                    // Link staff_id back to the user entity via an attribute
+                    await setAttrValue(userId, 'staffEntityId', staffId.toString(), true);
+                    
+                    console.log(`[AUDIT] Staff entity created: ${staffName} (${normalizedRole}) linked to user ${userId}`);
+                } catch (staffError) {
+                    console.error(`[WARN] Failed to create staff_entity for ${email}:`, staffError.message);
+                    // Continue anyway - the system will still work but doctors might not be able to teach courses
+                }
+            }
+
             console.log(`[AUDIT] Staff account created: ${email} (${normalizedRole}) by admin ${adminId}`);
 
             return {
                 success: true,
                 userId,
+                staffId,
                 temporaryPassword: tempPassword,
                 message: "Staff account created successfully. Share the temporary password with the staff member."
             };

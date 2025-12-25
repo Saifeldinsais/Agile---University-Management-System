@@ -4,6 +4,7 @@ import StudentService from "../../services/studentService";
 import socketService from "../../services/socketService";
 import Course from "./Course/Course";
 import EnrolledCourse from "./EnrolledCourse/EnrolledCourse";
+import CompletedCourses from "./CompletedCourses/CompletedCourses";
 
 import styles from "./Dashboard.module.css";
 
@@ -13,6 +14,11 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview"); // 'overview' or 'courses'
 
   const [assignments, setAssignments] = useState([]);
+  const [completedCoursesData, setCompletedCoursesData] = useState({
+    completedCourses: [],
+    gpa: 0,
+    totalCredits: 0,
+  });
 
   // Set page title
   useEffect(() => {
@@ -84,6 +90,35 @@ function Dashboard() {
       socketService.off("assignment-created", handleAssignmentCreated);
     };
   }, []);
+
+  // Fetch completed courses data
+  useEffect(() => {
+    const fetchCompletedCourses = async () => {
+      if (!student?.id) return;
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/student/completed-courses/${student.id}`
+        );
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setCompletedCoursesData({
+          completedCourses: data.completedCourses || [],
+          gpa: data.gpa || 0,
+          totalCredits: data.totalCredits || 0,
+        });
+      } catch (err) {
+        console.error("Error fetching completed courses:", err);
+        setCompletedCoursesData({
+          completedCourses: [],
+          gpa: 0,
+          totalCredits: 0,
+        });
+      }
+    };
+
+    fetchCompletedCourses();
+  }, [student?.id]);
 
   // Fetch courses
   useEffect(() => {
@@ -224,13 +259,16 @@ function Dashboard() {
 
   // Calculate academic statistics from enrolled courses
   const academicStats = useMemo(() => {
+    // Only count credits from approved/active enrolled courses
     const totalCredits = enrolled.reduce(
       (sum, course) => sum + (parseInt(course.credits) || 0),
       0
     );
+    
     const completedCourses = enrolled.filter(
       (c) => c.status?.toLowerCase() === "approved"
     ).length;
+    
     const pendingCourses = enrolled.filter(
       (c) => c.status?.toLowerCase() === "pending"
     ).length;
@@ -255,7 +293,7 @@ function Dashboard() {
       totalEnrolled: enrolled.length,
       completedCourses,
       pendingCourses,
-      totalCredits,
+      totalCredits, // This is for active enrolled courses
       averageGrade,
     };
   }, [enrolled]);
@@ -423,27 +461,24 @@ function Dashboard() {
                 <div className={styles.statCard}>
                   <div className={styles.statNumber}>4</div>
                   <div className={styles.statContent}>
-                    <h3>{academicStats.totalCredits}</h3>
-                    <p>Total Credits</p>
+                    <h3>{completedCoursesData.totalCredits}</h3>
+                    <p>Completed Credits</p>
+                    {completedCoursesData.completedCourses.length > 0 && (
+                      <small style={{ opacity: 0.7 }}>
+                        ({completedCoursesData.completedCourses.length} courses)
+                      </small>
+                    )}
                   </div>
                 </div>
 
                 <div className={styles.statCard}>
                   <div className={styles.statNumber}>5</div>
                   <div className={styles.statContent}>
-                    <h3>{academicStats.averageGrade}</h3>
-                    <p>Average Grade</p>
-                    {academicStats.averageGrade !== "--" && (
+                    <h3>{parseFloat(completedCoursesData.gpa).toFixed(2)}</h3>
+                    <p>GPA</p>
+                    {completedCoursesData.completedCourses.length > 0 && (
                       <small style={{ opacity: 0.7 }}>
-                        (
-                        {
-                          enrolled.filter(
-                            (c) =>
-                              c.status?.toLowerCase() === "approved" &&
-                              c.grade != null
-                          ).length
-                        }{" "}
-                        courses)
+                        Weighted by credits
                       </small>
                     )}
                   </div>
@@ -570,6 +605,10 @@ function Dashboard() {
         {/* COURSES TAB */}
         {activeTab === "courses" && (
           <div className={styles.coursesTab}>
+            <div className={styles.coursesSectionContent}>
+              <CompletedCourses studentId={student?.id} />
+            </div>
+
             <div className={styles.coursesSectionContent}>
               <h2>Available Courses</h2>
               <div className={styles.coursesContainer}>

@@ -52,9 +52,12 @@ const getDoctorCourses = async (req, res) => {
     const result = await doctorService.getDoctorCourses(doctorId);
 
     if (!result.success) {
-      return res.status(400).json({
+      // Return 403 for setup-related errors, 400 for bad requests
+      const statusCode = result.code === 'STAFF_NOT_SETUP' ? 403 : 400;
+      return res.status(statusCode).json({
         status: "fail",
         message: result.message,
+        code: result.code,
       });
     }
 
