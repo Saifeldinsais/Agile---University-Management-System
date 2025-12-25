@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import parentService from "../../services/parentService";
+import announcementService from "../../services/announcementService";
 import "./ParentPages.css";
 
 function Announcements() {
@@ -15,8 +15,8 @@ function Announcements() {
     const loadAnnouncements = async () => {
         try {
             setLoading(true);
-            const response = await parentService.getAnnouncements();
-            setAnnouncements(response.data);
+            const response = await announcementService.getAnnouncements();
+            setAnnouncements(response.data || []);
         } catch (err) {
             console.error("Failed to load announcements:", err);
         } finally {
@@ -26,7 +26,7 @@ function Announcements() {
 
     const handleMarkAsRead = async (announcementId) => {
         try {
-            await parentService.markAnnouncementRead(announcementId);
+            await announcementService.markAsRead(announcementId);
             setAnnouncements((prev) =>
                 prev.map((a) =>
                     a.announcement_id === announcementId ? { ...a, is_read: true } : a
@@ -96,8 +96,8 @@ function Announcements() {
                             <div
                                 key={announcement.announcement_id}
                                 className={`announcement-card ${!announcement.is_read ? "unread" : ""} ${selectedAnnouncement?.announcement_id === announcement.announcement_id
-                                        ? "selected"
-                                        : ""
+                                    ? "selected"
+                                    : ""
                                     }`}
                                 onClick={() => {
                                     setSelectedAnnouncement(announcement);
@@ -152,6 +152,11 @@ function Announcements() {
                             <div className="detail-content">
                                 {selectedAnnouncement.content}
                             </div>
+                            {selectedAnnouncement.deadline && (
+                                <div className="detail-expires" style={{ color: '#ef4444' }}>
+                                    ⏰ Deadline: {new Date(selectedAnnouncement.deadline).toLocaleString()}
+                                </div>
+                            )}
                             {selectedAnnouncement.expires_at && (
                                 <div className="detail-expires">
                                     Expires: {new Date(selectedAnnouncement.expires_at).toLocaleDateString()}

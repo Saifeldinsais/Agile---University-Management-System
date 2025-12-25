@@ -21,6 +21,7 @@ import AdminFacilities from "./pages/admin/AdminFacilities";
 import AdminEnrollments from "./pages/admin/AdminEnrollments";
 import AdminStaffDirectory from "./pages/admin/AdminStaffDirectory";
 import CourseAssignments from "./pages/admin/CourseAssignments";
+import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 
 
 import StudentDashboard from "./pages/student/Dashboard";
@@ -85,6 +86,7 @@ function App() {
       <Route path="/admin/enrollments" element={<AdminEnrollments />} />
       <Route path="/admin/staff/directory" element={<AdminStaffDirectory />} />
       <Route path="/admin/staff/assignments" element={<CourseAssignments />} />
+      <Route path="/admin/announcements" element={<AdminAnnouncements />} />
 
 
       {/* Student PAGES */}

@@ -120,6 +120,9 @@ function Dashboard() {
           <button className="menu-item" onClick={() => go("/admin/enrollments")}>
             Enrollments
           </button>
+          <button className="menu-item" onClick={() => go("/admin/announcements")}>
+            📢 Announcements
+          </button>
           <button className="menu-item" onClick={() => alert("Community soon")}>
             Community
           </button>
@@ -247,7 +250,7 @@ function Dashboard() {
               </button>
               <button
                 className="quick-btn"
-                onClick={() => alert("Announcements coming soon")}
+                onClick={() => go("/admin/announcements")}
               >
                 + Announcement
               </button>
