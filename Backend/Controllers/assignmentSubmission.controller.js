@@ -12,7 +12,7 @@ const submitAssignment = async (req, res) => {
         req.files.forEach(f => {
           try {
             fs.unlinkSync(f.path);
-          } catch (e) {}
+          } catch (e) { }
         });
       }
       return res.status(403).json({ status: 'fail', message: 'Only students can submit assignments' });
@@ -24,7 +24,7 @@ const submitAssignment = async (req, res) => {
         req.files.forEach(f => {
           try {
             fs.unlinkSync(f.path);
-          } catch (e) {}
+          } catch (e) { }
         });
       }
       return res.status(400).json({ status: 'fail', message: 'Assignment ID and files are required' });
@@ -44,7 +44,7 @@ const submitAssignment = async (req, res) => {
       req.files.forEach(f => {
         try {
           fs.unlinkSync(f.path);
-        } catch (e) {}
+        } catch (e) { }
       });
       return res.status(400).json({ status: 'fail', message: 'File validation failed', errors: validationErrors });
     }
@@ -56,7 +56,7 @@ const submitAssignment = async (req, res) => {
       req.files.forEach(f => {
         try {
           fs.unlinkSync(f.path);
-        } catch (e) {}
+        } catch (e) { }
       });
     }
     res.status(500).json({ status: 'fail', message: error.message });
