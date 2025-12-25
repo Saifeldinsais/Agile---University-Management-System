@@ -44,6 +44,10 @@ router.get('/categories', authenticate, eventController.getCategories);
 // Calendar view
 router.get('/calendar', authenticate, eventController.getCalendarEvents);
 
+// Parent-specific routes for viewing children's events
+router.get('/parent/children-events', authenticate, eventController.getChildrenEvents);
+router.get('/parent/child/:childId/events', authenticate, eventController.getChildEvents);
+
 // CRUD
 router.get('/', authenticate, eventController.getEvents);
 router.get('/:id', authenticate, eventController.getEventById);
@@ -63,3 +67,4 @@ router.post('/:id/check-out', authenticate, eventController.checkOutEvent);
 router.get('/:id/attendance', authenticate, eventController.getEventAttendance);
 
 module.exports = router;
+

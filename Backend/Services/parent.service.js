@@ -145,36 +145,103 @@ const parentService = {
      * Get all linked students for a parent
      */
     async getLinkedStudents(parentId) {
-        const students = await ParentEntity.getLinkedStudents(parentId);
+        console.log('[Parent Service] Getting linked students for parent:', parentId);
 
-        // Enrich with student attributes
+        let students = [];
+        try {
+            students = await ParentEntity.getLinkedStudents(parentId);
+        } catch (e) {
+            console.error('[Parent Service] Error from ParentEntity.getLinkedStudents:', e.message);
+            return [];
+        }
+
+        console.log('[Parent Service] Found', students.length, 'linked students');
+
+        // Enrich with student attributes (optional, don't fail if missing)
         const enrichedStudents = await Promise.all(students.map(async (student) => {
-            // Get student attributes from main entities EAV
-            const [attrs] = await pool.query(
-                `SELECT a.attribute_name, ea.value_string, ea.value_int
-                 FROM entity_attribute ea
-                 JOIN attributes a ON ea.attribute_id = a.attribute_id
-                 WHERE ea.entity_id = ?`,
-                [student.student_id]
-            );
+            try {
+                // Get student attributes from main entities EAV
+                const [attrs] = await pool.query(
+                    `SELECT a.attribute_name, ea.value_string, ea.value_int
+                     FROM entity_attribute ea
+                     JOIN attributes a ON ea.attribute_id = a.attribute_id
+                     WHERE ea.entity_id = ?`,
+                    [student.student_id]
+                );
 
-            const studentAttrs = {};
-            attrs.forEach(attr => {
-                studentAttrs[attr.attribute_name] = attr.value_string || attr.value_int;
-            });
+                const studentAttrs = {};
+                attrs.forEach(attr => {
+                    studentAttrs[attr.attribute_name] = attr.value_string || attr.value_int;
+                });
 
-            return {
-                ...student,
-                email: studentAttrs.email,
-                username: studentAttrs.username
-            };
+                return {
+                    ...student,
+                    email: studentAttrs.email,
+                    username: studentAttrs.username
+                };
+            } catch (e) {
+                console.error('[Parent Service] Error enriching student', student.student_id, ':', e.message);
+                return student;
+            }
         }));
 
         return enrichedStudents;
     },
 
     /**
-     * Link a parent to a student (admin function)
+     * Request to link a student (sets status to pending)
+     */
+    async requestStudentLink(parentId, studentEmail, relationship = 'Parent') {
+        // Find student by email using EAV pattern
+        const [students] = await pool.query(
+            `SELECT e.entity_id, e.entity_name 
+             FROM entities e
+             JOIN entity_attribute ea ON e.entity_id = ea.entity_id
+             JOIN attributes a ON ea.attribute_id = a.attribute_id
+             WHERE a.attribute_name = 'email' 
+             AND ea.value_string = ? 
+             AND e.entity_type = 'student'
+             LIMIT 1`,
+            [studentEmail]
+        );
+
+        if (students.length === 0) {
+            throw new Error('Student not found with this email');
+        }
+        const student = students[0];
+
+        // Check for existing link
+        const [existing] = await pool.query(
+            "SELECT link_id, link_status FROM parent_student_link WHERE parent_id = ? AND student_id = ?",
+            [parentId, student.entity_id]
+        );
+
+        if (existing.length > 0) {
+            if (existing[0].link_status === 'active') {
+                throw new Error('You are already linked to this student');
+            } else if (existing[0].link_status === 'pending') {
+                throw new Error('Link request is already pending approval');
+            }
+
+            // Re-submit if previously rejected or inactive
+            await pool.query(
+                "UPDATE parent_student_link SET link_status = 'pending', relationship = ? WHERE link_id = ?",
+                [relationship, existing[0].link_id]
+            );
+            return { success: true, message: 'Link request resubmitted successfully', studentName: student.entity_name };
+        }
+
+        // Create new pending link
+        await pool.query(
+            "INSERT INTO parent_student_link (parent_id, student_id, relationship, link_status) VALUES (?, ?, ?, 'pending')",
+            [parentId, student.entity_id, relationship]
+        );
+
+        return { success: true, message: 'Link request submitted for approval', studentName: student.entity_name };
+    },
+
+    /**
+     * Link a parent to a student (admin function - approve/force link)
      */
     async linkStudentToParent(parentId, studentId, relationship = 'parent') {
         // Verify student exists
@@ -511,16 +578,42 @@ const parentService = {
      * Get dashboard overview for a parent
      */
     async getDashboardOverview(parentId) {
-        const students = await this.getLinkedStudents(parentId);
-        const unreadMessages = await this.getUnreadMessageCount(parentId);
-        const unreadAnnouncements = await this.getUnreadAnnouncementCount(parentId);
+        // Get linked students (this should always work)
+        let students = [];
+        try {
+            students = await this.getLinkedStudents(parentId);
+        } catch (e) {
+            console.error('Error getting linked students:', e.message);
+        }
 
-        // Get recent announcements
-        const [recentAnnouncements] = await pool.query(
-            `SELECT title, priority, created_at 
-             FROM parent_announcement 
-             ORDER BY created_at DESC LIMIT 3`
-        );
+        // Get unread message count (optional - may fail if table doesn't exist)
+        let unreadMessages = 0;
+        try {
+            unreadMessages = await this.getUnreadMessageCount(parentId);
+        } catch (e) {
+            console.error('Error getting unread messages:', e.message);
+        }
+
+        // Get unread announcement count (optional - may fail if table doesn't exist)
+        let unreadAnnouncements = 0;
+        try {
+            unreadAnnouncements = await this.getUnreadAnnouncementCount(parentId);
+        } catch (e) {
+            console.error('Error getting unread announcements:', e.message);
+        }
+
+        // Get recent announcements (optional)
+        let recentAnnouncements = [];
+        try {
+            const [rows] = await pool.query(
+                `SELECT title, priority, created_at 
+                 FROM parent_announcement 
+                 ORDER BY created_at DESC LIMIT 3`
+            );
+            recentAnnouncements = rows;
+        } catch (e) {
+            console.error('Error getting recent announcements:', e.message);
+        }
 
         return {
             linkedStudents: students.length,

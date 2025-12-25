@@ -1,9 +1,16 @@
 /**
  * Event Service
  * Business logic for events management system
+ * 
+ * Role-Based Visibility Rules:
+ * - Admins: Full access to all events
+ * - Students: Can see 'all' and 'students' targeted events
+ * - Parents: Can see 'all', 'parents' events AND events their children have RSVP'd to
+ * - Staff: Can see 'all' and 'staff' targeted events
  */
 
 const pool = require('../Db_config/DB');
+const accessControl = require('../Utils/accessControl');
 
 const eventService = {
     // =====================================================
@@ -329,7 +336,85 @@ const eventService = {
         `, [eventId, eventId, eventId, eventId]);
 
         return stats[0];
+    },
+
+    // =====================================================
+    // Parent-Specific Functions
+    // =====================================================
+
+    /**
+     * Get events that a parent's children have RSVP'd to
+     * This allows parents to see events their children are attending
+     */
+    async getChildrenEvents(parentId) {
+        // Get linked children first
+        const linkedStudents = await accessControl.getLinkedStudentsForParent(parentId);
+        const studentIds = linkedStudents.map(s => s.student_id);
+
+        if (studentIds.length === 0) {
+            return [];
+        }
+
+        // Get events where any of the children have RSVP'd
+        const [events] = await pool.query(`
+            SELECT DISTINCT
+                e.*,
+                ec.name as category_name,
+                ec.color as category_color,
+                ec.icon as category_icon,
+                ent.entity_name as creator_name,
+                (SELECT COUNT(*) FROM event_rsvp WHERE event_id = e.event_id AND status = 'going') as going_count,
+                (SELECT COUNT(*) FROM event_rsvp WHERE event_id = e.event_id AND status = 'interested') as interested_count,
+                er.status as child_rsvp_status,
+                ch.entity_name as child_name
+            FROM event e
+            LEFT JOIN event_category ec ON e.category_id = ec.category_id
+            LEFT JOIN entities ent ON e.created_by = ent.entity_id
+            JOIN event_rsvp er ON e.event_id = er.event_id
+            JOIN entities ch ON er.user_id = ch.entity_id
+            WHERE er.user_id IN (${studentIds.map(() => '?').join(',')})
+            AND er.status IN ('going', 'interested')
+            AND e.status != 'cancelled'
+            ORDER BY e.start_datetime ASC
+        `, studentIds);
+
+        return events;
+    },
+
+    /**
+     * Get a specific child's events for a parent
+     */
+    async getChildEvents(parentId, childId) {
+        // Verify parent has access to this child
+        const canAccess = await accessControl.canAccessStudentData(parentId, 'parent', childId);
+        if (!canAccess) {
+            throw new Error('Access denied: You can only view events for your linked children');
+        }
+
+        // Get events where the specific child has RSVP'd
+        const [events] = await pool.query(`
+            SELECT 
+                e.*,
+                ec.name as category_name,
+                ec.color as category_color,
+                ec.icon as category_icon,
+                ent.entity_name as creator_name,
+                (SELECT COUNT(*) FROM event_rsvp WHERE event_id = e.event_id AND status = 'going') as going_count,
+                (SELECT COUNT(*) FROM event_rsvp WHERE event_id = e.event_id AND status = 'interested') as interested_count,
+                er.status as child_rsvp_status
+            FROM event e
+            LEFT JOIN event_category ec ON e.category_id = ec.category_id
+            LEFT JOIN entities ent ON e.created_by = ent.entity_id
+            JOIN event_rsvp er ON e.event_id = er.event_id
+            WHERE er.user_id = ?
+            AND er.status IN ('going', 'interested')
+            AND e.status != 'cancelled'
+            ORDER BY e.start_datetime ASC
+        `, [childId]);
+
+        return events;
     }
 };
 
 module.exports = eventService;
+

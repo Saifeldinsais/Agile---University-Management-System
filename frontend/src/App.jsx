@@ -23,6 +23,7 @@ import AdminStaffDirectory from "./pages/admin/AdminStaffDirectory";
 import CourseAssignments from "./pages/admin/CourseAssignments";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminEvents from "./pages/admin/AdminEvents";
+import AdminParentRequests from "./pages/admin/AdminParentRequests";
 
 
 import StudentDashboard from "./pages/student/Dashboard";
@@ -61,10 +62,11 @@ import MyStudents from "./pages/parent/MyStudents";
 import StudentProgress from "./pages/parent/StudentProgress";
 import ParentMessages from "./pages/parent/Messages";
 import ParentAnnouncements from "./pages/parent/Announcements";
-
+import ParentEvents from "./pages/parent/ParentEvents";
 import ParentProfile from "./pages/parent/ParentProfile";
 import ParentLogin from "./pages/parent/ParentLogin";
 import ParentSignup from "./pages/parent/ParentSignup";
+import ParentLinkStudent from "./pages/parent/ParentLinkStudent";
 
 
 function App() {
@@ -90,6 +92,7 @@ function App() {
       <Route path="/admin/staff/assignments" element={<CourseAssignments />} />
       <Route path="/admin/announcements" element={<AdminAnnouncements />} />
       <Route path="/admin/events" element={<AdminEvents />} />
+      <Route path="/admin/parent-requests" element={<AdminParentRequests />} />
 
 
       {/* Student PAGES */}
@@ -138,6 +141,8 @@ function App() {
         <Route path="messages" element={<ParentMessages />} />
         <Route path="messages/:teacherId" element={<ParentMessages />} />
         <Route path="announcements" element={<ParentAnnouncements />} />
+        <Route path="events" element={<ParentEvents />} />
+        <Route path="link-student" element={<ParentLinkStudent />} />
         <Route path="profile" element={<ParentProfile />} />
         <Route index element={<ParentDashboard />} />
       </Route>

@@ -74,6 +74,14 @@ const parentService = {
         return response.data;
     },
 
+    async requestStudentLink(studentEmail, relationship = "Parent") {
+        const response = await apiClient.post("/parent/request-link", {
+            studentEmail,
+            relationship,
+        });
+        return response.data;
+    },
+
     // =====================================================
     // Teachers
     // =====================================================

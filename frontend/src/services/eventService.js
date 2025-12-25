@@ -96,7 +96,20 @@ const eventService = {
     async getEventAttendance(id) {
         const response = await apiClient.get(`/events/${id}/attendance`);
         return response.data;
+    },
+
+    // Parent-specific: Get all children's RSVP'd events
+    async getChildrenEvents() {
+        const response = await apiClient.get('/events/parent/children-events');
+        return response.data;
+    },
+
+    // Parent-specific: Get specific child's events
+    async getChildEvents(childId) {
+        const response = await apiClient.get(`/events/parent/child/${childId}/events`);
+        return response.data;
     }
 };
 
 export default eventService;
+

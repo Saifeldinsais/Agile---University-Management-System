@@ -257,7 +257,63 @@ const eventController = {
             console.error('[Event] getEventStats error:', error);
             res.status(500).json({ success: false, message: error.message });
         }
+    },
+
+    // =====================================================
+    // Parent-Specific Endpoints
+    // =====================================================
+
+    /**
+     * Get all events that a parent's children have RSVP'd to
+     */
+    async getChildrenEvents(req, res) {
+        try {
+            const userId = req.user.id;
+            const userType = getUserType(req.user);
+
+            if (userType !== 'parent') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'This endpoint is only for parents'
+                });
+            }
+
+            const events = await eventService.getChildrenEvents(userId);
+            res.json({ success: true, data: events });
+        } catch (error) {
+            console.error('[Event] getChildrenEvents error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    /**
+     * Get events for a specific child
+     */
+    async getChildEvents(req, res) {
+        try {
+            const userId = req.user.id;
+            const userType = getUserType(req.user);
+            const { childId } = req.params;
+
+            if (userType !== 'parent') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'This endpoint is only for parents'
+                });
+            }
+
+            const events = await eventService.getChildEvents(userId, parseInt(childId));
+            res.json({ success: true, data: events });
+        } catch (error) {
+            console.error('[Event] getChildEvents error:', error);
+            if (error.message.includes('Access denied')) {
+                res.status(403).json({ success: false, message: error.message });
+            } else {
+                res.status(500).json({ success: false, message: error.message });
+            }
+        }
     }
 };
 
 module.exports = eventController;
+
