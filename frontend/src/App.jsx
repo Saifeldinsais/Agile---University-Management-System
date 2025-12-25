@@ -5,6 +5,7 @@ import MainLayout from "./layouts/MainLayout";
 import StudentLayout from "./layouts/StudentLayout";
 import DoctorLayout from "./layouts/DoctorLayout";
 import DoctorMainLayout from "./layouts/DoctorMainLayout";
+import ParentLayout from "./layouts/ParentLayout";
 
 import NotImplemented from "./pages/NotImplemented";
 
@@ -27,6 +28,8 @@ import StudentHome from "./pages/student/Home";
 import StudentCourses from "./pages/student/Courses";
 import StudentAssessments from "./pages/student/Assessments";
 import StudentAnnouncements from "./pages/student/Announcements";
+import StaffCommunication from "./pages/student/StaffCommunication";
+import MeetingRequests from "./pages/student/MeetingRequests";
 
 import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 
@@ -40,12 +43,25 @@ import DoctorOfficeHours from "./pages/doctor/OfficeHours";
 import DoctorAnnouncements from "./pages/doctor/Announcements";
 import DoctorProfile from "./pages/doctor/Profile";
 import DoctorAdvisor from "./pages/doctor/Advisor";
+import StudentMessages from "./pages/doctor/StudentMessages";
+import MeetingManagement from "./pages/doctor/MeetingManagement";
 
 import AdminCurriculum from "./pages/admin/AdminCurriculum";
 
 import TADashboard from "./pages/ta/TADashboard";
 
 import AdvisorDashboard from "./pages/advisor/AdvisorDashboard";
+
+// Parent Pages
+import ParentDashboard from "./pages/parent/ParentDashboard";
+import MyStudents from "./pages/parent/MyStudents";
+import StudentProgress from "./pages/parent/StudentProgress";
+import ParentMessages from "./pages/parent/Messages";
+import ParentAnnouncements from "./pages/parent/Announcements";
+
+import ParentProfile from "./pages/parent/ParentProfile";
+import ParentLogin from "./pages/parent/ParentLogin";
+import ParentSignup from "./pages/parent/ParentSignup";
 
 
 function App() {
@@ -58,6 +74,8 @@ function App() {
         <Route path="/dashboard" element={<NotImplemented />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/parent/login" element={<ParentLogin />} />
+        <Route path="/parent/signup" element={<ParentSignup />} />
       </Route>
 
       {/* ADMIN PAGES (no navbar, full admin layout) */}
@@ -76,7 +94,8 @@ function App() {
         <Route path="assessments" element={<StudentAssessments />} />
         <Route path="announcements" element={<StudentAnnouncements />} />
         <Route path="facilities" element={<NotImplemented />} />
-        <Route path="staff-communication" element={<NotImplemented />} />
+        <Route path="staff-communication" element={<StaffCommunication />} />
+        <Route path="meeting-requests" element={<MeetingRequests />} />
         <Route path="office-hours" element={<NotImplemented />} />
         <Route path="profile" element={<NotImplemented />} />
         <Route index element={<StudentDashboard />} />
@@ -90,6 +109,8 @@ function App() {
         <Route path="grading" element={<DoctorGrading />} />
         <Route path="students" element={<DoctorStudents />} />
         <Route path="communication" element={<DoctorCommunication />} />
+        <Route path="student-messages" element={<StudentMessages />} />
+        <Route path="meeting-management" element={<MeetingManagement />} />
         <Route path="office-hours" element={<DoctorOfficeHours />} />
         <Route path="announcements" element={<DoctorAnnouncements />} />
         <Route path="advisor" element={<DoctorAdvisor />} />
@@ -102,6 +123,18 @@ function App() {
 
       {/* Advisor PAGES */}
       <Route path="/advisor/dashboard" element={<AdvisorDashboard />} />
+
+      {/* Parent PAGES */}
+      <Route path="parent" element={<ParentLayout />}>
+        <Route path="dashboard" element={<ParentDashboard />} />
+        <Route path="students" element={<MyStudents />} />
+        <Route path="students/:studentId/progress" element={<StudentProgress />} />
+        <Route path="messages" element={<ParentMessages />} />
+        <Route path="messages/:teacherId" element={<ParentMessages />} />
+        <Route path="announcements" element={<ParentAnnouncements />} />
+        <Route path="profile" element={<ParentProfile />} />
+        <Route index element={<ParentDashboard />} />
+      </Route>
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />

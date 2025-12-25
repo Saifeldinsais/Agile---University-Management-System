@@ -14,19 +14,31 @@ function Home() {
         <Link to="/login" className="hero-btn">
           Login as Student
         </Link>
+
+        <div className="parent-links">
+          <span className="divider">or</span>
+          <div className="btn-group">
+            <Link to="/parent/login" className="hero-btn secondary">
+              Parent Login
+            </Link>
+            <Link to="/parent/signup" className="hero-btn outline">
+              Parent Signup
+            </Link>
+          </div>
+        </div>
       </section>
 
       <section className="about-section">
         <h2>About Us</h2>
         <p>
-          The University Management System (UMS) is designed to simplify academic 
-          life by enabling students to access their course information, enroll or 
-          drop classes, explore campus facilities, and track performance – all in 
-          one place.  
+          The University Management System (UMS) is designed to simplify academic
+          life by enabling students to access their course information, enroll or
+          drop classes, explore campus facilities, and track performance – all in
+          one place.
         </p>
         <p>
-          Our goal is to create an efficient, user-friendly system that enhances 
-          communication, improves academic transparency, and supports students in 
+          Our goal is to create an efficient, user-friendly system that enhances
+          communication, improves academic transparency, and supports students in
           achieving their educational goals.
         </p>
       </section>
