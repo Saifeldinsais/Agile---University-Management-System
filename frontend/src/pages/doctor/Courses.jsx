@@ -13,7 +13,7 @@ function DoctorCourses() {
   const [courseResources, setCourseResources] = useState([]);
   const [courseStaff, setCourseStaff] = useState([]);
   const [courseSchedule, setCourseSchedule] = useState([]);
-  
+
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
@@ -46,9 +46,9 @@ function DoctorCourses() {
     setSelectedCourse(course);
     const courseId = course.entity_id || course.id;
     const doctorId = localStorage.getItem("userId");
-    
+
     console.log(`[handleViewDetails] Course selected:`, { courseId, courseCode: course.code, courseTitle: course.title });
-    
+
     try {
       // Load students
       try {
@@ -112,7 +112,7 @@ function DoctorCourses() {
     setUploading(true);
     const courseId = selectedCourse.entity_id || selectedCourse.id;
     const doctorId = localStorage.getItem("userId");
-    
+
     let uploadedCount = 0;
     let failedCount = 0;
 
@@ -226,7 +226,7 @@ function DoctorCourses() {
 
               <div className={styles.grid}>
                 {/* Enrolled Students */}
-                <div 
+                <div
                   className={styles.section}
                   onClick={() => {
                     setActiveSection('students');
@@ -258,7 +258,7 @@ function DoctorCourses() {
                 </div>
 
                 {/* Course Resources/Materials */}
-                <div 
+                <div
                   className={styles.section}
                   onClick={() => {
                     setActiveSection('resources');
@@ -309,7 +309,7 @@ function DoctorCourses() {
                 </div>
 
                 {/* Assigned TAs */}
-                <div 
+                <div
                   className={styles.section}
                   onClick={() => {
                     setActiveSection('staff');
