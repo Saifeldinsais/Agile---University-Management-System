@@ -285,30 +285,30 @@ const adminService = {
 
   updateTimeSlot: async (roomId, slotId, updatedTimeSlot) => {
     try {
-        await initializeAttributes();
-        const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
+      await initializeAttributes();
+      const timeslotAttr = await ClassroomAttribute.getAttributeByName("timeslot");
 
-        // 1. Fetch the existing record to get its current array_index
-        const [existing] = await pool.query(
-            "SELECT array_index FROM classroom_entity_attribute WHERE value_id = ? AND entity_id = ?",
-            [slotId, roomId]
-        );
+      // 1. Fetch the existing record to get its current array_index
+      const [existing] = await pool.query(
+        "SELECT array_index FROM classroom_entity_attribute WHERE value_id = ? AND entity_id = ?",
+        [slotId, roomId]
+      );
 
-        if (!existing || existing.length === 0) {
-            return { success: false, message: "Time slot not found" };
-        }
+      if (!existing || existing.length === 0) {
+        return { success: false, message: "Time slot not found" };
+      }
 
-        const success = await ClassroomValue.updateClassroomValue(slotId, {
-            value_string: JSON.stringify(updatedTimeSlot),
-            array_index: existing[0].array_index 
-        });
+      const success = await ClassroomValue.updateClassroomValue(slotId, {
+        value_string: JSON.stringify(updatedTimeSlot),
+        array_index: existing[0].array_index
+      });
 
-        return { success: success };
+      return { success: success };
     } catch (error) {
-        console.error("Service Error:", error);
-        return { success: false, message: error.message };
+      console.error("Service Error:", error);
+      return { success: false, message: error.message };
     }
-},
+  },
 
   deleteTimeSlot: async (roomId, slotId) => {
     try {
@@ -503,60 +503,60 @@ const adminService = {
   },
 
   // ================= ASSIGNMENT (User <-> Course) =================
- assignCourseToDoctor: async (courseId, doctorId) => {
-  try {
-    const instructorAttr = await CourseAttribute.getAttributeByName("instructor_id");
-    if (!instructorAttr) {
-      return { success: false, message: "Course attribute instructor_id not found" };
-    }
+  assignCourseToDoctor: async (courseId, doctorId) => {
+    try {
+      const instructorAttr = await CourseAttribute.getAttributeByName("instructor_id");
+      if (!instructorAttr) {
+        return { success: false, message: "Course attribute instructor_id not found" };
+      }
 
-    const [existing] = await pool.query(
-      `SELECT value_id FROM course_entity_attribute
+      const [existing] = await pool.query(
+        `SELECT value_id FROM course_entity_attribute
        WHERE entity_id=? AND attribute_id=? LIMIT 1`,
-      [courseId, instructorAttr.attribute_id]
-    );
+        [courseId, instructorAttr.attribute_id]
+      );
 
-    if (existing.length > 0) {
-      await pool.query(
-        `UPDATE course_entity_attribute
+      if (existing.length > 0) {
+        await pool.query(
+          `UPDATE course_entity_attribute
          SET value_number=?
          WHERE value_id=?`,
-        [doctorId, existing[0].value_id]
-      );
-    } else {
-      await pool.query(
-        `INSERT INTO course_entity_attribute (entity_id, attribute_id, value_number)
+          [doctorId, existing[0].value_id]
+        );
+      } else {
+        await pool.query(
+          `INSERT INTO course_entity_attribute (entity_id, attribute_id, value_number)
          VALUES (?, ?, ?)`,
-        [courseId, instructorAttr.attribute_id, doctorId]
-      );
+          [courseId, instructorAttr.attribute_id, doctorId]
+        );
+      }
+
+      return { success: true };
+    } catch (e) {
+      return { success: false, message: e.message };
     }
+  },
 
-    return { success: true };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
-},
+  unassignCourseFromDoctor: async (courseId, doctorId) => {
+    try {
+      await initializeAttributes();
 
-unassignCourseFromDoctor: async (courseId, doctorId) => {
-  try {
-    await initializeAttributes();
+      const attr = await UserAttribute.getAttributeByName("assigned_course");
+      if (!attr) {
+        return { success: false, message: "User attribute 'assigned_course' not found. Create it in initializeAttributes()." };
+      }
 
-    const attr = await UserAttribute.getAttributeByName("assigned_course");
-    if (!attr) {
-      return { success: false, message: "User attribute 'assigned_course' not found. Create it in initializeAttributes()." };
+      const existing = await UserValue.getArrayValues(doctorId, attr.attribute_id);
+      const target = existing.find(v => String(v.value_reference) === String(courseId));
+
+      if (!target) return { success: false, message: "Course not assigned to this doctor" };
+
+      await UserValue.deleteValue(target.value_id);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.message };
     }
-
-    const existing = await UserValue.getArrayValues(doctorId, attr.attribute_id);
-    const target = existing.find(v => String(v.value_reference) === String(courseId));
-
-    if (!target) return { success: false, message: "Course not assigned to this doctor" };
-
-    await UserValue.deleteValue(target.value_id);
-    return { success: true };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-},
+  },
 
 
   // ================= ENROLLMENTS =================
@@ -607,6 +607,53 @@ unassignCourseFromDoctor: async (courseId, doctorId) => {
       return { success: true, students };
     } catch (error) {
       return { success: false, message: "Error getting students: " + error.message };
+    }
+  },
+
+  // ================= PARENT LINKING =================
+  getPendingParentLinks: async () => {
+    try {
+      const [rows] = await pool.query(`
+            SELECT 
+                psl.link_id,
+                psl.relationship,
+                psl.created_at,
+                p.entity_name as parent_name,
+                s.entity_name as student_name,
+                (SELECT ea.value_string FROM entity_attribute ea 
+                 JOIN attributes a ON ea.attribute_id = a.attribute_id 
+                 WHERE ea.entity_id = s.entity_id AND a.attribute_name = 'email' LIMIT 1) as student_email,
+                (SELECT value_string FROM parent_entity_attribute v 
+                 JOIN parent_attributes a ON v.attribute_id = a.attribute_id 
+                 WHERE v.entity_id = p.entity_id AND a.attribute_name = 'email' LIMIT 1) as parent_email
+            FROM parent_student_link psl
+            JOIN parent_entity p ON psl.parent_id = p.entity_id
+            JOIN entities s ON psl.student_id = s.entity_id
+            WHERE psl.link_status = 'pending'
+            ORDER BY psl.created_at DESC
+       `);
+
+      return { success: true, data: rows };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+
+  approveParentLink: async (linkId) => {
+    try {
+      await pool.query("UPDATE parent_student_link SET link_status = 'active' WHERE link_id = ?", [linkId]);
+      return { success: true, message: 'Link approved' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+
+  rejectParentLink: async (linkId) => {
+    try {
+      await pool.query("UPDATE parent_student_link SET link_status = 'rejected' WHERE link_id = ?", [linkId]);
+      return { success: true, message: 'Link rejected' };
+    } catch (error) {
+      return { success: false, message: error.message };
     }
   }
 };

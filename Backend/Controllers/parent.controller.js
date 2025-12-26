@@ -117,11 +117,40 @@ const parentController = {
     async getStudents(req, res) {
         try {
             const parentId = req.user.entity_id;
+            console.log('[Parent Controller] Getting students for parent:', parentId);
             const students = await parentService.getLinkedStudents(parentId);
+            console.log('[Parent Controller] Found students:', students.length);
             res.json({
                 success: true,
                 data: students
             });
+        } catch (error) {
+            console.error('[Parent Controller] Error getting students:', error);
+            res.status(400).json({
+                success: false,
+                message: error.message || 'Failed to get linked students'
+            });
+        }
+    },
+
+    /**
+     * Request a link to a student
+     * POST /api/parent/request-link
+     */
+    async requestLink(req, res) {
+        try {
+            const parentId = req.user.entity_id;
+            const { studentEmail, relationship } = req.body;
+
+            if (!studentEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Student email is required'
+                });
+            }
+
+            const result = await parentService.requestStudentLink(parentId, studentEmail, relationship);
+            res.json(result);
         } catch (error) {
             res.status(400).json({
                 success: false,

@@ -4,9 +4,16 @@
  * 
  * Note: This service uses user entity_ids from the 'entities' table for both 
  * students and staff (not staff_entity). This ensures JWT token IDs work correctly.
+ * 
+ * Role-Based Visibility Rules:
+ * - Students: Can only message staff assigned to their courses
+ * - Staff: Can only message students enrolled in their courses
+ * - Parents: Can only message teachers of their linked children
+ * - Admins: Full access to all communications
  */
 
 const pool = require('../Db_config/DB');
+const accessControl = require('../Utils/accessControl');
 
 const communicationService = {
     // =====================================================
@@ -365,30 +372,144 @@ const communicationService = {
     // =====================================================
 
     /**
-     * Get available staff for messaging (doctors, TAs, advisors from entities table)
+     * Get available staff for messaging based on role-based access
+     * - Students: Can only message staff assigned to their enrolled courses
+     * - Parents: Can only message teachers of their linked children
+     * - Admins: Can message any staff
      */
-    async getAvailableStaff(studentId, staffType = null) {
-        let query = `
-            SELECT DISTINCT 
-                e.entity_id,
-                e.entity_name,
-                e.entity_type as staff_type
-            FROM entities e
-            WHERE e.entity_type IN ('doctor', 'ta', 'advisor')
-        `;
-        const params = [];
+    async getAvailableStaff(userId, userType, staffType = null) {
+        console.log('[COMM Service] getAvailableStaff:', { userId, userType, staffType });
 
-        if (staffType) {
-            query += ' AND e.entity_type = ?';
-            params.push(staffType);
+        // Admins can message any staff
+        if (userType === 'admin') {
+            let query = `
+                SELECT DISTINCT 
+                    e.entity_id,
+                    e.entity_name,
+                    e.entity_type as staff_type
+                FROM entities e
+                WHERE e.entity_type IN ('doctor', 'ta', 'advisor')
+            `;
+            const params = [];
+
+            if (staffType) {
+                query += ' AND e.entity_type = ?';
+                params.push(staffType);
+            }
+
+            query += ' ORDER BY e.entity_name ASC';
+            const [staff] = await pool.query(query, params);
+            return staff;
         }
 
-        query += ' ORDER BY e.entity_name ASC';
+        // Students can only message staff from their courses
+        if (userType === 'student') {
+            const assignedStaff = await accessControl.getAssignedStaffForStudent(userId);
 
-        const [staff] = await pool.query(query, params);
-        console.log('[COMM Service] getAvailableStaff found:', staff.length, 'staff members');
-        return staff;
+            if (staffType) {
+                return assignedStaff.filter(s =>
+                    s.staff_role === staffType || s.assignment_role === staffType
+                );
+            }
+
+            // Map to expected format
+            return assignedStaff.map(s => ({
+                entity_id: s.staff_id,
+                entity_name: s.staff_name,
+                staff_type: s.staff_role || s.assignment_role,
+                course_title: s.course_title,
+                course_code: s.course_code
+            }));
+        }
+
+        // Parents can only message teachers of their children
+        if (userType === 'parent') {
+            const teachers = await accessControl.getTeachersForParent(userId);
+
+            if (staffType) {
+                return teachers.filter(t =>
+                    t.staff_role === staffType || t.assignment_role === staffType
+                );
+            }
+
+            // Map to expected format
+            return teachers.map(t => ({
+                entity_id: t.staff_id,
+                entity_name: t.staff_name,
+                staff_type: t.staff_role || t.assignment_role,
+                course_title: t.course_title,
+                course_code: t.course_code
+            }));
+        }
+
+        // Staff can message other staff and students in their courses
+        if (['doctor', 'ta', 'advisor', 'staff'].includes(userType)) {
+            // Return other staff members
+            let query = `
+                SELECT DISTINCT 
+                    e.entity_id,
+                    e.entity_name,
+                    e.entity_type as staff_type
+                FROM entities e
+                WHERE e.entity_type IN ('doctor', 'ta', 'advisor')
+                AND e.entity_id != ?
+            `;
+            const params = [userId];
+
+            if (staffType) {
+                query += ' AND e.entity_type = ?';
+                params.push(staffType);
+            }
+
+            query += ' ORDER BY e.entity_name ASC';
+            const [staff] = await pool.query(query, params);
+            return staff;
+        }
+
+        return [];
+    },
+
+    /**
+     * Get available students for messaging (for staff members)
+     * Staff can only message students enrolled in their courses
+     */
+    async getAvailableStudents(staffId, userType) {
+        console.log('[COMM Service] getAvailableStudents:', { staffId, userType });
+
+        // Admins can message any student
+        if (userType === 'admin') {
+            const [students] = await pool.query(`
+                SELECT entity_id, entity_name, entity_email
+                FROM entities
+                WHERE entity_type = 'student'
+                ORDER BY entity_name ASC
+            `);
+            return students;
+        }
+
+        // Staff can only message students in their courses
+        if (['doctor', 'ta', 'advisor', 'staff'].includes(userType)) {
+            const assignedStudents = await accessControl.getAssignedStudentsForStaff(staffId);
+
+            return assignedStudents.map(s => ({
+                entity_id: s.student_id,
+                entity_name: s.student_name,
+                entity_email: s.student_email,
+                course_title: s.course_title,
+                course_code: s.course_code
+            }));
+        }
+
+        return [];
+    },
+
+    /**
+     * Validate if a user can create/access a conversation with target
+     */
+    async validateConversationAccess(userId, userType, targetId, targetType) {
+        return await accessControl.canCommunicate(userId, userType, targetId, targetType);
     }
 };
 
 module.exports = communicationService;
+

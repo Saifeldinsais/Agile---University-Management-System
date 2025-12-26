@@ -25,17 +25,27 @@ const authenticateParent = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
-        // Verify this is a parent token
-        if (decoded.entity_type !== 'parent') {
+        // Verify this is a parent token - check both entity_type and role
+        const userRole = decoded.entity_type || decoded.role;
+        if (userRole !== 'parent') {
+            console.log('[Parent Routes] Access denied. User role:', userRole, 'Token:', decoded);
             return res.status(403).json({
                 success: false,
-                message: 'Access denied. Parent role required.'
+                message: `Access denied. Parent role required. Your role: ${userRole}`
             });
         }
 
-        req.user = decoded;
+        // Normalize the user object
+        req.user = {
+            id: decoded.entity_id || decoded.id,
+            entity_id: decoded.entity_id || decoded.id,
+            entity_type: 'parent',
+            role: 'parent',
+            email: decoded.email
+        };
         next();
     } catch (error) {
+        console.error('[Parent Routes] Token error:', error.message);
         return res.status(401).json({
             success: false,
             message: 'Invalid or expired token'
@@ -62,6 +72,7 @@ router.get('/dashboard', authenticateParent, parentController.getDashboard);
 
 // Students
 router.get('/students', authenticateParent, parentController.getStudents);
+router.post('/request-link', authenticateParent, parentController.requestLink);
 router.get('/students/:studentId/progress', authenticateParent, parentController.getStudentProgress);
 router.get('/students/:studentId/attendance', authenticateParent, parentController.getStudentAttendance);
 router.get('/students/:studentId/remarks', authenticateParent, parentController.getStudentRemarks);

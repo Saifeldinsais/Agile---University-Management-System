@@ -1,9 +1,16 @@
 /**
  * Announcement Service
  * Business logic for centralized announcements system
+ * 
+ * Role-Based Visibility Rules:
+ * - Admins: Full access to all announcements
+ * - Students: Can see 'all', 'students', and 'parents' announcements
+ * - Parents: Can see 'all' and 'parents' announcements
+ * - Staff: Can see 'all' and 'staff' announcements
  */
 
 const pool = require('../Db_config/DB');
+const accessControl = require('../Utils/accessControl');
 
 const announcementService = {
     // =====================================================
@@ -100,13 +107,18 @@ const announcementService = {
 
     /**
      * Get announcements for a user based on their role
+     * Role-Based Visibility:
+     * - Students can also see parent announcements for transparency
+     * - Parents see only parent and all announcements
+     * - Staff see staff and all announcements
+     * - Admins see everything
      */
     async getAnnouncements(userId, userType, filters = {}) {
         const { status, priority, limit, includeRead } = filters;
 
-        // Map user type to target audience
+        // Map user type to target audience - students can now see parent announcements too
         const audienceMap = {
-            'student': ['all', 'students'],
+            'student': ['all', 'students', 'parents'],  // Students can see parent announcements for transparency
             'parent': ['all', 'parents'],
             'doctor': ['all', 'staff'],
             'ta': ['all', 'staff'],

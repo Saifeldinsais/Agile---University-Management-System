@@ -40,18 +40,46 @@ function CompletedCourses({ studentId }) {
   }, [studentId]);
 
   const getGradeColor = (grade) => {
-    if (grade >= 90) return "#27ae60"; // Green - A
-    if (grade >= 80) return "#3498db"; // Blue - B
-    if (grade >= 70) return "#f39c12"; // Orange - C
-    if (grade >= 60) return "#e74c3c"; // Red - D
-    return "#95a5a6"; // Gray - F
+    // Percentage check (if grade > 5, assume percentage scale)
+    if (grade > 5) {
+      if (grade >= 90) return "#27ae60";
+      if (grade >= 80) return "#3498db";
+      if (grade >= 70) return "#f59e0b";
+      if (grade >= 60) return "#ef4444";
+      return "#6b7280";
+    }
+    // GPA scale (0-4.0)
+    if (grade >= 4.0) return "#27ae60"; // A
+    if (grade >= 3.7) return "#27ae60"; // A-
+    if (grade >= 3.3) return "#3498db"; // B+
+    if (grade >= 3.0) return "#3498db"; // B
+    if (grade >= 2.7) return "#3498db"; // B-
+    if (grade >= 2.0) return "#f59e0b"; // C+, C, C-
+    if (grade >= 1.0) return "#ef4444"; // D+, D, D-
+    return "#6b7280"; // F
   };
 
   const getGradeLabel = (grade) => {
-    if (grade >= 90) return "A";
-    if (grade >= 80) return "B";
-    if (grade >= 70) return "C";
-    if (grade >= 60) return "D";
+    // Percentage check
+    if (grade > 5) {
+      if (grade >= 90) return "A";
+      if (grade >= 80) return "B";
+      if (grade >= 70) return "C";
+      if (grade >= 60) return "D";
+      return "F";
+    }
+    // GPA scale - standard 4.0 scale (A+ is stored separately in letterGrade)
+    if (grade >= 4.0) return "A";   // A+ and A = 4.0
+    if (grade >= 3.7) return "A-";  // 3.7
+    if (grade >= 3.3) return "B+";  // 3.3
+    if (grade >= 3.0) return "B";   // 3.0
+    if (grade >= 2.7) return "B-";  // 2.7
+    if (grade >= 2.3) return "C+";  // 2.3
+    if (grade >= 2.0) return "C";   // 2.0
+    if (grade >= 1.7) return "C-";  // 1.7
+    if (grade >= 1.3) return "D+";  // 1.3
+    if (grade >= 1.0) return "D";   // 1.0
+    if (grade >= 0.7) return "D-";  // 0.7
     return "F";
   };
 
@@ -94,50 +122,60 @@ function CompletedCourses({ studentId }) {
         </div>
       ) : (
         <div className={styles.coursesList}>
-          {completedCourses.map((course) => (
-            <div key={course.enrollmentId} className={styles.courseCard}>
-              <div className={styles.courseInfo}>
-                <div className={styles.courseHeader}>
-                  <h3 className={styles.courseTitle}>{course.title}</h3>
-                  <span className={styles.courseCode}>{course.code}</span>
-                </div>
-                <p className={styles.department}>{course.department}</p>
-                <div className={styles.courseDetails}>
-                  <span className={styles.detail}>
-                    <strong>Credits:</strong> {course.credits}
-                  </span>
-                  <span className={styles.detail}>
-                    <strong>Completed:</strong>{" "}
-                    {new Date(course.completionDate).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+          {completedCourses.map((course) => {
+            // Use stored letterGrade if available, otherwise calculate from GPA
+            const displayGrade = course.letterGrade || getGradeLabel(course.finalGrade);
+            const gradeColorValue = course.letterGrade
+              ? (course.letterGrade.startsWith('A') ? '#22c55e' : course.letterGrade.startsWith('B') ? '#3b82f6' : course.letterGrade.startsWith('C') ? '#f59e0b' : course.letterGrade.startsWith('D') ? '#ef4444' : '#6b7280')
+              : getGradeColor(course.finalGrade);
 
-              <div className={styles.gradeSection}>
-                <div
-                  className={styles.gradeCircle}
-                  style={{
-                    borderColor: getGradeColor(course.finalGrade),
-                  }}
-                >
-                  <div
-                    className={styles.gradeLabel}
-                    style={{ color: getGradeColor(course.finalGrade) }}
-                  >
-                    {getGradeLabel(course.finalGrade)}
+            return (
+              <div key={course.enrollmentId} className={styles.courseCard}>
+                <div className={styles.courseInfo}>
+                  <div className={styles.courseHeader}>
+                    <h3 className={styles.courseTitle}>{course.title}</h3>
+                    <span className={styles.courseCode}>{course.code}</span>
+                  </div>
+                  <p className={styles.department}>{course.department}</p>
+                  <div className={styles.courseDetails}>
+                    <span className={styles.detail}>
+                      <strong>Credits:</strong> {course.credits}
+                    </span>
+                    {course.completionDate && (
+                      <span className={styles.detail}>
+                        <strong>Completed:</strong>{" "}
+                        {new Date(course.completionDate).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className={styles.gradeInfo}>
-                  <span className={styles.gradeValue}>
-                    {course.finalGrade.toFixed(2)}
-                  </span>
-                  <span className={styles.gradeStatus}>
-                    {course.completionStatus}
-                  </span>
+
+                <div className={styles.gradeSection}>
+                  <div
+                    className={styles.gradeCircle}
+                    style={{
+                      borderColor: gradeColorValue,
+                    }}
+                  >
+                    <div
+                      className={styles.gradeLabel}
+                      style={{ color: gradeColorValue }}
+                    >
+                      {displayGrade}
+                    </div>
+                  </div>
+                  <div className={styles.gradeInfo}>
+                    <span className={styles.gradeValue}>
+                      {course.finalGrade.toFixed(2)}
+                    </span>
+                    <span className={styles.gradeStatus}>
+                      {course.status || course.completionStatus}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

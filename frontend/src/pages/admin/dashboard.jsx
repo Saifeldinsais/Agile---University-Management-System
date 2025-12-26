@@ -15,8 +15,36 @@ function Dashboard() {
     totalCapacity: 0,
     totalCourses: 0,
   });
+  const [parentRequests, setParentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const fetchParentRequests = async () => {
+    try {
+      const response = await apiClient.get("/admin/parent-requests");
+      setParentRequests(response.data.data || []);
+    } catch (err) {
+      console.error("Failed to load parent requests:", err);
+    }
+  };
+
+  const handleApproveRequest = async (linkId) => {
+    try {
+      await apiClient.patch(`/admin/parent-requests/${linkId}/approve`);
+      setParentRequests(parentRequests.filter(r => r.link_id !== linkId));
+    } catch (err) {
+      alert("Failed to approve: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleRejectRequest = async (linkId) => {
+    try {
+      await apiClient.patch(`/admin/parent-requests/${linkId}/reject`);
+      setParentRequests(parentRequests.filter(r => r.link_id !== linkId));
+    } catch (err) {
+      alert("Failed to reject: " + (err.response?.data?.message || err.message));
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -24,11 +52,14 @@ function Dashboard() {
         setLoading(true);
         setError("");
 
-        // Facilities + courses
+        // Facilities + courses + parent requests
         const [roomsRes, coursesRes] = await Promise.all([
           apiClient.get("/admin/classrooms"),
           apiClient.get("/student/viewCourses"),
         ]);
+
+        // Fetch parent requests separately (non-blocking)
+        fetchParentRequests();
 
         // Backend response: { data: { classrooms: [...] } }
         const classrooms = roomsRes.data?.data?.classrooms || roomsRes.data?.classrooms || [];
@@ -200,6 +231,53 @@ function Dashboard() {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </section>
+
+        {/* Parent Link Requests Section */}
+        <section className="parent-requests-section">
+          <div className="panel full-width">
+            <h3>
+              🔗 Parent Link Requests
+              {parentRequests.length > 0 && (
+                <span className="badge">{parentRequests.length}</span>
+              )}
+            </h3>
+            {parentRequests.length === 0 ? (
+              <p className="no-requests">No pending parent-student link requests</p>
+            ) : (
+              <div className="requests-list">
+                {parentRequests.map((req) => (
+                  <div key={req.link_id} className="request-item">
+                    <div className="request-info">
+                      <div className="request-users">
+                        <span className="parent-name">👤 {req.parent_name}</span>
+                        <span className="arrow">→</span>
+                        <span className="student-name">🎓 {req.student_name}</span>
+                      </div>
+                      <div className="request-details">
+                        <span className="relationship">{req.relationship}</span>
+                        <span className="email">{req.parent_email}</span>
+                      </div>
+                    </div>
+                    <div className="request-actions">
+                      <button
+                        className="approve-btn"
+                        onClick={() => handleApproveRequest(req.link_id)}
+                      >
+                        ✓ Approve
+                      </button>
+                      <button
+                        className="reject-btn"
+                        onClick={() => handleRejectRequest(req.link_id)}
+                      >
+                        ✗ Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </main>

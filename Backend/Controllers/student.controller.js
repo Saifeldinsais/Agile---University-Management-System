@@ -81,6 +81,34 @@ const upsertEnrollmentValueString = async (enrollmentId, attrId, valueString) =>
 
 /* -------------------- Controllers -------------------- */
 
+// 0) getStudentProfile
+const getStudentProfile = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const [rows] = await pool.query(
+      `SELECT 
+        e.entity_id,
+        MAX(CASE WHEN a.attribute_name='username' THEN ea.value_string END) AS username,
+        MAX(CASE WHEN a.attribute_name='email' THEN ea.value_string END) AS email
+      FROM entities e
+      LEFT JOIN entity_attribute ea ON e.entity_id = ea.entity_id
+      LEFT JOIN attributes a ON ea.attribute_id = a.attribute_id
+      WHERE e.entity_id = ? AND e.entity_type = 'student'
+      GROUP BY e.entity_id`,
+      [studentId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    return res.status(200).json({ user: rows[0] });
+  } catch (error) {
+    return res.status(500).json({ message: "Error fetching student profile", error: error.message });
+  }
+};
+
 // 1) viewCourses  (Course EAV)
 const viewCourses = async (req, res) => {
   try {
@@ -90,7 +118,7 @@ const viewCourses = async (req, res) => {
         MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
         MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
         MAX(CASE WHEN ca.attribute_name='description' THEN cea.value_string END) AS description,
-        MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits,
+        MAX(CASE WHEN ca.attribute_name='credits' THEN COALESCE(cea.value_number, CAST(cea.value_string AS UNSIGNED)) END) AS credits,
         MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department
       FROM course_entity ce
       LEFT JOIN course_entity_attribute cea ON ce.entity_id = cea.entity_id
@@ -223,7 +251,7 @@ const viewEnrolled = async (req, res) => {
         MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
         MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
         MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department,
-        MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits
+        MAX(CASE WHEN ca.attribute_name='credits' THEN COALESCE(cea.value_number, CAST(cea.value_string AS UNSIGNED)) END) AS credits
 
       FROM enrollment_entity ee
       JOIN enrollment_entity_attribute vStudent
@@ -459,7 +487,7 @@ const getCourseInstructors = async (req, res) => {
 const getCompletedCoursesWithGrades = async (req, res) => {
   try {
     await initEnrollmentAttributes();
-    
+
     const { studentId } = req.params;
     if (!studentId) {
       return res.status(400).json({ message: "studentId is required" });
@@ -470,22 +498,23 @@ const getCompletedCoursesWithGrades = async (req, res) => {
     // Get all enrollment attributes IDs
     const studentAttrId = await getEnrollmentAttrId("studentId");
     const courseAttrId = await getEnrollmentAttrId("courseId");
-    const finalGradeAttrId = await getEnrollmentAttrId("finalGrade");
-    const completionStatusAttrId = await getEnrollmentAttrId("completionStatus");
-    const completionDateAttrId = await getEnrollmentAttrId("completionDate");
+    // Updated attribute names to match doctor service and DB
+    const gradeAttrId = await getEnrollmentAttrId("grade"); // was finalGrade
+    const statusAttrId = await getEnrollmentAttrId("status"); // was completionStatus
 
-    if (!studentAttrId || !courseAttrId || !finalGradeAttrId || !completionStatusAttrId) {
+    if (!studentAttrId || !courseAttrId || !gradeAttrId) {
       return res.status(500).json({ message: "Enrollment attributes not found" });
     }
 
-    // Get all completed enrollments for the student
+    // Get all enrollments with grades for the student
+    // We fetch ALL graded enrollments to calculate GPA correctly (including Fs)
     const [enrollments] = await pool.query(`
       SELECT 
         ee.entity_id,
         MAX(CASE WHEN ea.attribute_name='courseId' THEN eea.value_number END) AS courseId,
-        MAX(CASE WHEN ea.attribute_name='finalGrade' THEN eea.value_number END) AS finalGrade,
-        MAX(CASE WHEN ea.attribute_name='completionStatus' THEN eea.value_string END) AS completionStatus,
-        MAX(CASE WHEN ea.attribute_name='completionDate' THEN eea.value_string END) AS completionDate
+        MAX(CASE WHEN ea.attribute_name='grade' THEN eea.value_number END) AS grade,
+        MAX(CASE WHEN ea.attribute_name='letterGrade' THEN eea.value_string END) AS letterGrade,
+        MAX(CASE WHEN ea.attribute_name='status' THEN eea.value_string END) AS status
       FROM enrollment_entity ee
       JOIN enrollment_entity_attribute eea ON ee.entity_id = eea.entity_id
       JOIN enrollment_attributes ea ON eea.attribute_id = ea.attribute_id
@@ -495,9 +524,9 @@ const getCompletedCoursesWithGrades = async (req, res) => {
         JOIN enrollment_attributes ea2 ON eea2.attribute_id = ea2.attribute_id
         WHERE ea2.attribute_name='studentId' AND eea2.value_number=?
       )
-      AND ea.attribute_name IN ('courseId', 'finalGrade', 'completionStatus', 'completionDate')
+      AND ea.attribute_name IN ('courseId', 'grade', 'letterGrade', 'status')
       GROUP BY ee.entity_id
-      HAVING completionStatus = 'completed' AND finalGrade IS NOT NULL
+      HAVING grade IS NOT NULL
     `, [studentIdNum]);
 
     if (!enrollments || enrollments.length === 0) {
@@ -508,12 +537,13 @@ const getCompletedCoursesWithGrades = async (req, res) => {
       });
     }
 
-    // Fetch course details for completed enrollments
+    // Fetch course details for enrollments
     const courseIds = enrollments.map(e => e.courseId).filter(Boolean);
-    
+
     let completedCourses = [];
-    let totalCredits = 0;
-    let totalGradePoints = 0;
+    let totalCredits = 0; // successfully completed credits (no F)
+    let totalAttemptedCredits = 0; // for GPA calc (includes F)
+    let totalGradePoints = 0; // for GPA calc
 
     if (courseIds.length > 0) {
       const placeholders = courseIds.map(() => '?').join(',');
@@ -522,7 +552,7 @@ const getCompletedCoursesWithGrades = async (req, res) => {
           ce.entity_id AS courseId,
           MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
           MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
-          MAX(CASE WHEN ca.attribute_name='credits' THEN cea.value_number END) AS credits,
+          MAX(CASE WHEN ca.attribute_name='credits' THEN COALESCE(cea.value_number, CAST(cea.value_string AS UNSIGNED)) END) AS credits,
           MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department
         FROM course_entity ce
         LEFT JOIN course_entity_attribute cea ON ce.entity_id = cea.entity_id
@@ -531,34 +561,56 @@ const getCompletedCoursesWithGrades = async (req, res) => {
         GROUP BY ce.entity_id
       `, courseIds);
 
+      // Debug logging
+      console.log('[getCompletedCoursesWithGrades] courseIds:', courseIds);
+      console.log('[getCompletedCoursesWithGrades] courses result:', JSON.stringify(courses, null, 2));
+      console.log('[getCompletedCoursesWithGrades] enrollments:', JSON.stringify(enrollments, null, 2));
+
       // Merge course details with enrollment grades
       completedCourses = enrollments.map(enrollment => {
-        const course = courses.find(c => c.courseId === enrollment.courseId);
-        if (course) {
-          totalCredits += parseInt(course.credits) || 0;
-          totalGradePoints += (parseFloat(enrollment.finalGrade) || 0) * (parseInt(course.credits) || 0);
+        // Use Number() to ensure proper comparison (handles DECIMAL/string types)
+        const enrollmentCourseId = Number(enrollment.courseId);
+        const course = courses.find(c => Number(c.courseId) === enrollmentCourseId);
+        const grade = parseFloat(enrollment.grade) || 0;
+        // Parse credits, handling both number and string formats
+        const credits = course?.credits ? Number(course.credits) : 0;
+
+        if (course && credits > 0) {
+          // GPA Calculation: Include everything
+          totalAttemptedCredits += credits;
+          totalGradePoints += (grade * credits);
+
+          // Completed Credits: Only if grade > 0 (passing)
+          if (grade > 0) {
+            totalCredits += credits;
+          }
         }
+
         return {
           enrollmentId: enrollment.entity_id,
-          courseId: enrollment.courseId,
+          courseId: enrollmentCourseId,
           title: course?.title || 'Unknown Course',
           code: course?.code || '',
-          credits: course?.credits || 0,
+          credits: credits,
           department: course?.department || '',
-          finalGrade: parseFloat(enrollment.finalGrade) || 0,
-          completionDate: enrollment.completionDate,
-          completionStatus: enrollment.completionStatus
+          finalGrade: grade,
+          letterGrade: enrollment.letterGrade || null,  // Use stored letter grade
+          status: enrollment.status || (grade > 0 ? 'COMPLETED' : 'FAILED')
         };
       });
     }
 
-    // Calculate GPA (weighted by credits)
-    const gpa = totalCredits > 0 
-      ? (totalGradePoints / totalCredits).toFixed(2)
+    // Calculate GPA (weighted by attempted credits)
+    const gpa = totalAttemptedCredits > 0
+      ? (totalGradePoints / totalAttemptedCredits).toFixed(2)
       : 0;
 
+    // Filter the list to only return actually completed (passing) courses to the frontend
+    // while preserving the correct GPA calculation that included the Fs.
+    const passingCourses = completedCourses.filter(c => c.finalGrade > 0);
+
     return res.status(200).json({
-      completedCourses,
+      completedCourses: passingCourses,
       gpa: parseFloat(gpa),
       totalCredits
     });
@@ -573,7 +625,7 @@ const getCompletedCoursesWithGrades = async (req, res) => {
 const updateEnrollmentWithFinalGrade = async (req, res) => {
   try {
     await initEnrollmentAttributes();
-    
+
     const { enrollmentId, finalGrade, completionStatus } = req.body;
     if (!enrollmentId || finalGrade === undefined || !completionStatus) {
       return res.status(400).json({ message: "enrollmentId, finalGrade, and completionStatus are required" });
@@ -671,6 +723,7 @@ const updateEnrollmentWithFinalGrade = async (req, res) => {
 };
 
 module.exports = {
+  getStudentProfile,
   viewCourses,
   enrollCourse,
   viewEnrolled,

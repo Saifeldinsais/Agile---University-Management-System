@@ -424,11 +424,43 @@ const getStudents = async (req, res) => {
   }
 };
 
+// ================= PARENT LINKING =================
+
+const getPendingParentRequests = async (req, res) => {
+  const result = await adminService.getPendingParentLinks();
+  if (result.success) {
+    res.json({ success: true, data: result.data });
+  } else {
+    res.status(500).json({ success: false, message: result.message });
+  }
+};
+
+const approveParentRequest = async (req, res) => {
+  const { id } = req.params;
+  const result = await adminService.approveParentLink(id);
+  if (result.success) {
+    res.json({ success: true, message: result.message });
+  } else {
+    res.status(500).json({ success: false, message: result.message });
+  }
+};
+
+const rejectParentRequest = async (req, res) => {
+  const { id } = req.params;
+  const result = await adminService.rejectParentLink(id);
+  if (result.success) {
+    res.json({ success: true, message: result.message });
+  } else {
+    res.status(500).json({ success: false, message: result.message });
+  }
+};
+
 module.exports = {
   updateTimeSlot, deleteTimeSlot, addTimeSlot,
   createClassroom, getClassrooms, updateClassroom, deleteClassroom, getClassroomStatus,
   assignClassroom, unassignClassroom,
   assignCourseToDoctor, unassignCourseFromDoctor,
   acceptEnrollments, rejectEnrollments,
-  getStudents
+  getStudents,
+  getPendingParentRequests, approveParentRequest, rejectParentRequest
 };
