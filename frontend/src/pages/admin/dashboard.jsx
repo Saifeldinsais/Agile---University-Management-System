@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "../../services/apiClient";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminNavbar from "../../components/AdminNavbar";
 import "./dashboard.css";
 
 function Dashboard() {
@@ -105,30 +105,17 @@ function Dashboard() {
   }
 
   return (
-    <div className="admin-page">
-      <AdminSidebar />
+    <div className="admin-layout">
+      <AdminNavbar />
 
-      {/* Main content */}
       <main className="admin-main">
         <header className="admin-header">
           <div>
-            <h1>Admin Dashboard</h1>
-            <p className="subtitle">
-              Live overview of classrooms, time slots and courses.
-            </p>
+            <h1>Dashboard</h1>
+            <p className="subtitle">System overview</p>
             {error && (
-              <p style={{ color: "red", marginTop: 4, fontSize: 13 }}>{error}</p>
+              <p style={{ color: "#dc2626", marginTop: 4, fontSize: 13 }}>{error}</p>
             )}
-          </div>
-
-          <div className="header-right">
-            <div className="admin-user">
-              <div className="avatar">A</div>
-              <div>
-                <p className="user-name">Admin</p>
-                <p className="user-role">System Administrator</p>
-              </div>
-            </div>
           </div>
         </header>
 
@@ -172,25 +159,25 @@ function Dashboard() {
                 className="quick-btn"
                 onClick={() => go("/admin/facilities")}
               >
-                + Add Classroom
+                Add Classroom
               </button>
               <button
                 className="quick-btn"
                 onClick={() => go("/admin/facilities")}
               >
-                + Add Time Slot
+                Add Time Slot
               </button>
               <button
                 className="quick-btn"
                 onClick={() => go("/admin/staff/directory")}
               >
-                + Add Staff
+                Add Staff
               </button>
               <button
                 className="quick-btn"
                 onClick={() => go("/admin/announcements")}
               >
-                + Announcement
+                New Announcement
               </button>
             </div>
           </div>
@@ -238,7 +225,7 @@ function Dashboard() {
         <section className="parent-requests-section">
           <div className="panel full-width">
             <h3>
-              🔗 Parent Link Requests
+              Parent Link Requests
               {parentRequests.length > 0 && (
                 <span className="badge">{parentRequests.length}</span>
               )}
@@ -251,9 +238,9 @@ function Dashboard() {
                   <div key={req.link_id} className="request-item">
                     <div className="request-info">
                       <div className="request-users">
-                        <span className="parent-name">👤 {req.parent_name}</span>
+                        <span className="parent-name">{req.parent_name}</span>
                         <span className="arrow">→</span>
-                        <span className="student-name">🎓 {req.student_name}</span>
+                        <span className="student-name">{req.student_name}</span>
                       </div>
                       <div className="request-details">
                         <span className="relationship">{req.relationship}</span>
@@ -265,13 +252,13 @@ function Dashboard() {
                         className="approve-btn"
                         onClick={() => handleApproveRequest(req.link_id)}
                       >
-                        ✓ Approve
+                        Approve
                       </button>
                       <button
                         className="reject-btn"
                         onClick={() => handleRejectRequest(req.link_id)}
                       >
-                        ✗ Reject
+                        Reject
                       </button>
                     </div>
                   </div>

@@ -1,121 +1,195 @@
+/* ============================================
+   DOCTOR DASHBOARD - CLEAN & PROFESSIONAL
+   Font: Inter | Primary: #1E40AF
+   ============================================ */
+
 .dashboard {
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
+/* ==================== WELCOME SECTION ==================== */
 .welcomeBanner {
-  background: #2563eb;
-  color: white;
-  padding: 30px 40px;
-  border-radius: 12px;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .welcomeBanner h1 {
-  margin: 0 0 10px 0;
-  font-size: 2rem;
-  font-weight: 700;
+  margin: 0 0 4px 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #1E293B;
+  letter-spacing: -0.025em;
 }
 
 .welcomeBanner p {
   margin: 0;
-  font-size: 1rem;
-  opacity: 0.9;
+  font-size: 14px;
+  color: #64748B;
+  font-weight: 400;
 }
 
+/* ==================== STATS GRID ==================== */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .statCard {
-  background: white;
+  background: #FFFFFF;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
   display: flex;
-  align-items: center;
-  gap: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+  align-items: flex-start;
+  gap: 16px;
+  border: 1px solid #E2E8F0;
+  transition: box-shadow 0.2s ease;
+}
+
+.statCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .statIcon {
-  font-size: 2.5rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statIcon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.statIcon.courses {
+  background: #EFF6FF;
+}
+
+.statIcon.courses svg {
+  stroke: #1E40AF;
+}
+
+.statIcon.deadlines {
+  background: #FEF3C7;
+}
+
+.statIcon.deadlines svg {
+  stroke: #B45309;
+}
+
+.statIcon.grading {
+  background: #F0FDF4;
+}
+
+.statIcon.grading svg {
+  stroke: #059669;
+}
+
+.statIcon.meetings {
+  background: #F5F3FF;
+}
+
+.statIcon.meetings svg {
+  stroke: #7C3AED;
 }
 
 .statContent {
   flex: 1;
+  min-width: 0;
 }
 
 .statLabel {
-  font-size: 0.85rem;
-  color: #6b7280;
+  font-size: 13px;
+  color: #64748B;
   font-weight: 500;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .statValue {
-  font-size: 2rem;
+  font-size: 32px;
   font-weight: 700;
-  color: #1f2937;
+  color: #1E293B;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
 }
 
+/* ==================== CONTENT GRID ==================== */
 .contentGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
 }
 
 .card {
-  background: white;
+  background: #FFFFFF;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+  border: 1px solid #E2E8F0;
 }
 
 .card h2 {
   margin: 0 0 20px 0;
-  font-size: 1.25rem;
-  color: #1f2937;
+  font-size: 16px;
+  color: #1E293B;
   font-weight: 600;
-  border-bottom: 2px solid #f3f4f6;
-  padding-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardIcon {
+  width: 20px;
+  height: 20px;
+  color: #64748B;
 }
 
 .emptyText {
-  color: #9ca3af;
+  color: #94A3B8;
   text-align: center;
-  padding: 20px 0;
+  padding: 32px 16px;
   margin: 0;
+  font-size: 14px;
 }
 
+/* ==================== COURSE LIST ==================== */
 .courseList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .courseItem {
-  padding: 12px;
-  background: #f9fafb;
+  padding: 16px;
+  background: #F8FAFC;
   border-radius: 8px;
-  border-left: 4px solid #2563eb;
+  border-left: 3px solid #1E40AF;
+  transition: background 0.15s ease;
+}
+
+.courseItem:hover {
+  background: #F1F5F9;
 }
 
 .courseCode {
-  font-weight: 700;
-  color: #2563eb;
-  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1E40AF;
+  font-size: 13px;
+  margin-bottom: 4px;
 }
 
 .courseTitle {
-  color: #374151;
-  font-size: 0.95rem;
-  margin-top: 4px;
+  color: #1E293B;
+  font-size: 14px;
+  font-weight: 500;
 }
 
+/* ==================== ITEM LIST ==================== */
 .itemList {
   display: flex;
   flex-direction: column;
@@ -123,15 +197,15 @@
 }
 
 .listItem {
-  padding: 12px;
-  background: #f9fafb;
+  padding: 16px;
+  background: #F8FAFC;
   border-radius: 8px;
-  border-left: 4px solid #2563eb;
-  transition: background 0.2s ease;
+  border-left: 3px solid #64748B;
+  transition: background 0.15s ease;
 }
 
 .listItem:hover {
-  background: #f0f4ff;
+  background: #F1F5F9;
 }
 
 .itemContent {
@@ -142,48 +216,100 @@
 
 .itemTitle {
   font-weight: 600;
-  color: #1f2937;
-  font-size: 0.95rem;
+  color: #1E293B;
+  font-size: 14px;
 }
 
 .itemMeta {
-  font-size: 0.85rem;
-  color: #6b7280;
+  font-size: 13px;
+  color: #64748B;
 }
 
 .itemPreview {
-  font-size: 0.85rem;
-  color: #9ca3af;
+  font-size: 13px;
+  color: #94A3B8;
   margin-top: 4px;
-  font-style: italic;
 }
 
+/* ==================== LOADING ==================== */
 .loadingBox {
-  padding: 40px;
-  text-align: center;
-  color: #6b7280;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  color: #64748B;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-@media (max-width: 768px) {
-  .welcomeBanner {
-    padding: 20px;
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 1280px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
+}
 
-  .welcomeBanner h1 {
-    font-size: 1.5rem;
-  }
-
+@media (max-width: 1024px) {
   .contentGrid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 768px) {
+  .welcomeBanner h1 {
+    font-size: 24px;
+  }
 
   .statsGrid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+  }
+
+  .statCard {
+    padding: 20px;
+  }
+
+  .statValue {
+    font-size: 28px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcomeBanner h1 {
+    font-size: 20px;
+  }
+
+  .welcomeBanner p {
+    font-size: 13px;
+  }
+
+  .statCard {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .statIcon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .statIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .statValue {
+    font-size: 24px;
   }
 
   .card {
     padding: 16px;
   }
-}
 
+  .card h2 {
+    font-size: 15px;
+  }
+}

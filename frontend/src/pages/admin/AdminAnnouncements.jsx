@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import announcementService from "../../services/announcementService";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminNavbar from "../../components/AdminNavbar";
 import "./dashboard.css";
 
 function AdminAnnouncements() {
@@ -140,13 +140,13 @@ function AdminAnnouncements() {
     };
 
     return (
-        <div className="admin-page">
-            <AdminSidebar />
+        <div className="admin-layout">
+            <AdminNavbar />
 
             <main className="admin-main">
                 <header className="admin-header">
                     <div>
-                        <h1>📢 Announcements Management</h1>
+                        <h1>Announcements</h1>
                         <p className="subtitle">Create and manage university announcements</p>
                     </div>
                     <button

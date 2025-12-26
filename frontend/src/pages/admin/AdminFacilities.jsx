@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "../../services/apiClient";
 import { API_BASE_URL } from "../../services/config";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminNavbar from "../../components/AdminNavbar";
 import "./dashboard.css";
 import TimeSlotModal from "../../components/TimeSlotModal";
 
@@ -222,8 +222,8 @@ function AdminFacilities() {
   );
 
   return (
-    <div className="admin-page">
-      <AdminSidebar />
+    <div className="admin-layout">
+      <AdminNavbar />
 
       {/* Main */}
       <main className="admin-main">

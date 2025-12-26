@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import assignmentService from '../../services/assignmentService';
 import * as courseService from '../../services/courseService';
 import adminStaffService from '../../services/adminStaffService';
-import AdminSidebar from '../../components/AdminSidebar';
+import AdminNavbar from '../../components/AdminNavbar';
 import './CourseAssignments.css';
 import './dashboard.css';
 
@@ -919,14 +919,13 @@ function CourseAssignments() {
   });
 
   return (
-    <div className="admin-page">
-      <AdminSidebar />
+    <div className="admin-layout">
+      <AdminNavbar />
 
-      {/* Main content */}
       <main className="admin-main">
         <header className="admin-header">
           <div>
-            <h1>Course Assignments</h1>
+            <h1>Assignments</h1>
             <p className="subtitle">Manage staff assignments to courses</p>
           </div>
 
