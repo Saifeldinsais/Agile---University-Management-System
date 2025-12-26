@@ -722,6 +722,143 @@ const updateEnrollmentWithFinalGrade = async (req, res) => {
   }
 };
 
+// GET /student/my-course-materials
+// Returns all course materials for courses the student is enrolled in
+const getEnrolledCourseMaterials = async (req, res) => {
+  try {
+    const studentId = req.user?.id;
+    if (!studentId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    // Ensure course_resources table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS course_resources (
+          resource_id INT AUTO_INCREMENT PRIMARY KEY,
+          course_id INT NOT NULL,
+          doctor_id INT NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          file_name VARCHAR(255) NOT NULL,
+          file_path VARCHAR(512) NOT NULL,
+          file_type VARCHAR(100),
+          file_size BIGINT,
+          upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          is_active BOOLEAN DEFAULT TRUE,
+          INDEX idx_course (course_id),
+          INDEX idx_doctor (doctor_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // Get studentId and courseId attribute IDs
+    const studentAttrId = await getEnrollmentAttrId("studentId");
+    const courseAttrId = await getEnrollmentAttrId("courseId");
+    const statusAttrId = await getEnrollmentAttrId("status");
+
+    if (!studentAttrId || !courseAttrId) {
+      return res.status(500).json({ status: "fail", message: "Enrollment attributes not configured" });
+    }
+
+    // Get all courses the student is enrolled in (approved/active status)
+    const [enrollments] = await pool.query(`
+      SELECT DISTINCT CAST(vCourse.value_number AS UNSIGNED) AS courseId
+      FROM enrollment_entity ee
+      JOIN enrollment_entity_attribute vStudent
+        ON vStudent.entity_id = ee.entity_id
+       AND vStudent.attribute_id = ?
+       AND CAST(vStudent.value_number AS UNSIGNED) = ?
+      JOIN enrollment_entity_attribute vCourse
+        ON vCourse.entity_id = ee.entity_id
+       AND vCourse.attribute_id = ?
+      LEFT JOIN enrollment_entity_attribute vStatus
+        ON vStatus.entity_id = ee.entity_id
+       AND vStatus.attribute_id = ?
+      WHERE vStatus.value_string IS NULL 
+         OR UPPER(TRIM(vStatus.value_string)) NOT IN ('REJECTED', 'DROPPED', 'CANCELLED')
+    `, [studentAttrId, studentId, courseAttrId, statusAttrId || -1]);
+
+    if (enrollments.length === 0) {
+      return res.status(200).json({
+        status: "success",
+        data: [],
+        message: "No enrolled courses found"
+      });
+    }
+
+    const courseIds = enrollments.map(e => e.courseId);
+
+    // Get course details for enrolled courses
+    const placeholders = courseIds.map(() => '?').join(',');
+    const [courses] = await pool.query(`
+      SELECT
+        ce.entity_id AS courseId,
+        MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
+        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
+        MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department,
+        MAX(CASE WHEN ca.attribute_name='credits' THEN COALESCE(cea.value_number, CAST(cea.value_string AS UNSIGNED)) END) AS credits
+      FROM course_entity ce
+      LEFT JOIN course_entity_attribute cea ON ce.entity_id = cea.entity_id
+      LEFT JOIN course_attributes ca ON cea.attribute_id = ca.attribute_id
+      WHERE ce.entity_id IN (${placeholders})
+      GROUP BY ce.entity_id
+    `, courseIds);
+
+    // Get resources for all enrolled courses
+    const [resources] = await pool.query(`
+      SELECT 
+        resource_id AS resourceId,
+        course_id AS courseId,
+        title,
+        description,
+        file_name AS fileName,
+        file_path AS filePath,
+        file_type AS fileType,
+        file_size AS fileSize,
+        upload_date AS uploadDate
+      FROM course_resources
+      WHERE course_id IN (${placeholders}) AND is_active = TRUE
+      ORDER BY upload_date DESC
+    `, courseIds);
+
+    // Organize resources by course
+    const courseMaterials = courses.map(course => {
+      const courseResources = resources.filter(r => Number(r.courseId) === Number(course.courseId));
+      return {
+        courseId: course.courseId,
+        code: course.code || '',
+        title: course.title || 'Unknown Course',
+        department: course.department || '',
+        credits: course.credits || 0,
+        resourceCount: courseResources.length,
+        resources: courseResources.map(r => ({
+          resourceId: r.resourceId,
+          title: r.title,
+          description: r.description,
+          fileName: r.fileName,
+          filePath: r.filePath,
+          fileType: r.fileType,
+          fileSize: r.fileSize,
+          uploadDate: r.uploadDate
+        }))
+      };
+    });
+
+    // Sort courses by code
+    courseMaterials.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+    return res.status(200).json({
+      status: "success",
+      data: courseMaterials,
+      totalCourses: courseMaterials.length,
+      totalResources: resources.length
+    });
+
+  } catch (error) {
+    console.error("getEnrolledCourseMaterials error:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 module.exports = {
   getStudentProfile,
   viewCourses,
@@ -734,5 +871,6 @@ module.exports = {
   getStaffOfficeHours,
   getCourseInstructors,
   getCompletedCoursesWithGrades,
-  updateEnrollmentWithFinalGrade
+  updateEnrollmentWithFinalGrade,
+  getEnrolledCourseMaterials
 };

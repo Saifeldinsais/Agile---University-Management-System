@@ -22,6 +22,12 @@ function Courses() {
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
 
+  // ===== Course Materials =====
+  const [showMaterialsModal, setShowMaterialsModal] = useState(false);
+  const [courseMaterials, setCourseMaterials] = useState([]);
+  const [loadingMaterials, setLoadingMaterials] = useState(false);
+  const [expandedCourses, setExpandedCourses] = useState({});
+
   // ===== Selection: Course -> Instructors -> OfficeHours =====
   const [selectedCourseId, setSelectedCourseId] = useState("");
 
@@ -126,6 +132,64 @@ function Courses() {
 
     fetchCourses();
   }, []);
+
+  // =========================
+  // Fetch Course Materials
+  // =========================
+  const fetchCourseMaterials = async () => {
+    if (!token) {
+      alert("Please log in to view course materials.");
+      return;
+    }
+
+    try {
+      setLoadingMaterials(true);
+      setShowMaterialsModal(true);
+
+      const res = await fetch(`${API_BASE_URL}/student/my-course-materials`, {
+        method: "GET",
+        headers: authHeaders,
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || "Failed to fetch materials");
+
+      setCourseMaterials(Array.isArray(json.data) ? json.data : []);
+    } catch (e) {
+      console.error("fetchCourseMaterials error:", e);
+      setCourseMaterials([]);
+    } finally {
+      setLoadingMaterials(false);
+    }
+  };
+
+  const toggleCourseExpand = (courseId) => {
+    setExpandedCourses((prev) => ({
+      ...prev,
+      [courseId]: !prev[courseId],
+    }));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  };
+
+  const getFileIcon = (fileType) => {
+    if (!fileType) return "📄";
+    const type = fileType.toLowerCase();
+    if (type.includes("pdf")) return "📕";
+    if (type.includes("word") || type.includes("doc")) return "📘";
+    if (type.includes("excel") || type.includes("sheet") || type.includes("xls")) return "📗";
+    if (type.includes("powerpoint") || type.includes("ppt")) return "📙";
+    if (type.includes("image") || type.includes("png") || type.includes("jpg")) return "🖼️";
+    if (type.includes("video") || type.includes("mp4")) return "🎬";
+    if (type.includes("audio") || type.includes("mp3")) return "🎵";
+    if (type.includes("zip") || type.includes("rar")) return "📦";
+    return "📄";
+  };
 
   // =========================
   // 1) When course selected -> fetch instructors
@@ -385,10 +449,32 @@ function Courses() {
           <h2>Course Curriculum & Access</h2>
 
           <div className={styles.featureList}>
-            <div className={styles.feature}>
+            <button
+              type="button"
+              className={styles.feature}
+              style={{
+                textAlign: "left",
+                cursor: "pointer",
+                background: "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
+                border: "2px solid #667eea",
+                padding: "20px",
+                width: "100%",
+              }}
+              onClick={fetchCourseMaterials}
+              title="View Course Materials"
+            >
               <h3>📖 Course Materials</h3>
               <p>Access syllabi, lecture notes, and course resources</p>
-            </div>
+              <span style={{
+                fontSize: "0.8rem",
+                color: "#667eea",
+                fontWeight: 600,
+                marginTop: "8px",
+                display: "inline-block"
+              }}>
+                Click to view all materials →
+              </span>
+            </button>
 
             <div className={styles.feature}>
               <h3>👨‍🏫 Course Staff</h3>
@@ -698,6 +784,277 @@ function Courses() {
           )}
         </div>
       </div>
+
+      {/* ===== Course Materials Modal ===== */}
+      {showMaterialsModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setShowMaterialsModal(false)}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "900px",
+              maxHeight: "85vh",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                padding: "24px 30px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, fontSize: "1.5rem" }}>📖 Course Materials</h2>
+                <p style={{ margin: "8px 0 0", opacity: 0.9, fontSize: "0.95rem" }}>
+                  Access all materials from your enrolled courses
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMaterialsModal(false)}
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  color: "white",
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  fontSize: "1.5rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ flex: 1, overflow: "auto", padding: "24px 30px" }}>
+              {loadingMaterials ? (
+                <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                  <div style={{ fontSize: "3rem", marginBottom: "16px" }}>⏳</div>
+                  <p style={{ color: "#6b7280", fontSize: "1.1rem" }}>Loading course materials...</p>
+                </div>
+              ) : courseMaterials.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                  <div style={{ fontSize: "4rem", marginBottom: "16px" }}>📚</div>
+                  <h3 style={{ margin: "0 0 10px", color: "#374151" }}>No Materials Available</h3>
+                  <p style={{ color: "#6b7280", margin: 0 }}>
+                    Your instructors haven't uploaded any materials yet.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Summary Stats */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                      gap: "12px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#f3f4f6",
+                        padding: "16px",
+                        borderRadius: "12px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "#667eea" }}>
+                        {courseMaterials.length}
+                      </div>
+                      <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Courses</div>
+                    </div>
+                    <div
+                      style={{
+                        background: "#f3f4f6",
+                        padding: "16px",
+                        borderRadius: "12px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "#764ba2" }}>
+                        {courseMaterials.reduce((sum, c) => sum + c.resourceCount, 0)}
+                      </div>
+                      <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Total Resources</div>
+                    </div>
+                  </div>
+
+                  {/* Course Accordion */}
+                  {courseMaterials.map((course) => (
+                    <div
+                      key={course.courseId}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {/* Course Header */}
+                      <button
+                        onClick={() => toggleCourseExpand(course.courseId)}
+                        style={{
+                          width: "100%",
+                          padding: "18px 20px",
+                          background: expandedCourses[course.courseId]
+                            ? "linear-gradient(135deg, #667eea10 0%, #764ba210 100%)"
+                            : "#fafafa",
+                          border: "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          textAlign: "left",
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#1f2937" }}>
+                            {course.code && <span style={{ color: "#667eea" }}>{course.code}</span>}
+                            {course.code && " — "}
+                            {course.title}
+                          </div>
+                          <div style={{ color: "#6b7280", fontSize: "0.9rem", marginTop: "4px" }}>
+                            {course.department && `${course.department} • `}
+                            {course.resourceCount} {course.resourceCount === 1 ? "resource" : "resources"}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            background: "#667eea",
+                            color: "white",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "1.2rem",
+                            transition: "transform 0.2s ease",
+                            transform: expandedCourses[course.courseId] ? "rotate(180deg)" : "rotate(0deg)",
+                          }}
+                        >
+                          ▼
+                        </div>
+                      </button>
+
+                      {/* Course Resources */}
+                      {expandedCourses[course.courseId] && (
+                        <div style={{ padding: "16px 20px", background: "white" }}>
+                          {course.resources.length === 0 ? (
+                            <p style={{ color: "#9ca3af", textAlign: "center", margin: 0 }}>
+                              No resources available for this course yet.
+                            </p>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                              {course.resources.map((resource) => (
+                                <div
+                                  key={resource.resourceId}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "14px",
+                                    padding: "14px 16px",
+                                    background: "#f9fafb",
+                                    borderRadius: "10px",
+                                    border: "1px solid #e5e7eb",
+                                  }}
+                                >
+                                  <div style={{ fontSize: "2rem" }}>{getFileIcon(resource.fileType)}</div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div
+                                      style={{
+                                        fontWeight: 600,
+                                        color: "#1f2937",
+                                        marginBottom: "4px",
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                      }}
+                                    >
+                                      {resource.title}
+                                    </div>
+                                    {resource.description && (
+                                      <div
+                                        style={{
+                                          color: "#6b7280",
+                                          fontSize: "0.85rem",
+                                          marginBottom: "4px",
+                                          whiteSpace: "nowrap",
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                        }}
+                                      >
+                                        {resource.description}
+                                      </div>
+                                    )}
+                                    <div style={{ color: "#9ca3af", fontSize: "0.8rem" }}>
+                                      {formatFileSize(resource.fileSize)}
+                                      {resource.uploadDate &&
+                                        ` • ${new Date(resource.uploadDate).toLocaleDateString()}`}
+                                    </div>
+                                  </div>
+                                  <a
+                                    href={`http://localhost:5000${resource.filePath}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                      color: "white",
+                                      padding: "10px 18px",
+                                      borderRadius: "8px",
+                                      textDecoration: "none",
+                                      fontSize: "0.9rem",
+                                      fontWeight: 600,
+                                      whiteSpace: "nowrap",
+                                      transition: "opacity 0.2s ease",
+                                    }}
+                                    onMouseOver={(e) => (e.target.style.opacity = "0.9")}
+                                    onMouseOut={(e) => (e.target.style.opacity = "1")}
+                                  >
+                                    ↓ Download
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

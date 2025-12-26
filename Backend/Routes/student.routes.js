@@ -24,4 +24,7 @@ Router.get(
   StudentControllers.getCourseInstructors
 );
 
+// Course Materials - Get all materials for enrolled courses
+Router.get("/my-course-materials", authenticateToken, StudentControllers.getEnrolledCourseMaterials);
+
 module.exports = Router;
