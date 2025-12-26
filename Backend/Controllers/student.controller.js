@@ -859,6 +859,264 @@ const getEnrolledCourseMaterials = async (req, res) => {
   }
 };
 
+// GET /student/my-assessments
+// Returns all assessments for enrolled courses, organized by course with grading status
+const getMyAssessmentsByCourse = async (req, res) => {
+  try {
+    const studentId = req.user?.id;
+    if (!studentId) {
+      return res.status(401).json({ status: "fail", message: "Unauthorized" });
+    }
+
+    // Get studentId and courseId attribute IDs
+    const studentAttrId = await getEnrollmentAttrId("studentId");
+    const courseAttrId = await getEnrollmentAttrId("courseId");
+    const statusAttrId = await getEnrollmentAttrId("status");
+
+    if (!studentAttrId || !courseAttrId) {
+      return res.status(500).json({ status: "fail", message: "Enrollment attributes not configured" });
+    }
+
+    // Get all courses the student is enrolled in (approved status)
+    const [enrollments] = await pool.query(`
+      SELECT DISTINCT CAST(vCourse.value_number AS UNSIGNED) AS courseId
+      FROM enrollment_entity ee
+      JOIN enrollment_entity_attribute vStudent
+        ON vStudent.entity_id = ee.entity_id
+       AND vStudent.attribute_id = ?
+       AND CAST(vStudent.value_number AS UNSIGNED) = ?
+      JOIN enrollment_entity_attribute vCourse
+        ON vCourse.entity_id = ee.entity_id
+       AND vCourse.attribute_id = ?
+      LEFT JOIN enrollment_entity_attribute vStatus
+        ON vStatus.entity_id = ee.entity_id
+       AND vStatus.attribute_id = ?
+      WHERE vStatus.value_string IS NULL 
+         OR UPPER(TRIM(vStatus.value_string)) = 'APPROVED'
+    `, [studentAttrId, studentId, courseAttrId, statusAttrId || -1]);
+
+    if (enrollments.length === 0) {
+      return res.status(200).json({
+        status: "success",
+        data: [],
+        summary: { totalCourses: 0, totalAssessments: 0, submittedCount: 0, gradedCount: 0, pendingCount: 0 },
+        message: "No enrolled courses found"
+      });
+    }
+
+    const courseIds = enrollments.map(e => e.courseId);
+
+    // Get course details for enrolled courses
+    const placeholders = courseIds.map(() => '?').join(',');
+    const [courses] = await pool.query(`
+      SELECT
+        ce.entity_id AS courseId,
+        MAX(CASE WHEN ca.attribute_name='title' THEN cea.value_string END) AS title,
+        MAX(CASE WHEN ca.attribute_name='code' THEN cea.value_string END) AS code,
+        MAX(CASE WHEN ca.attribute_name='department' THEN cea.value_string END) AS department
+      FROM course_entity ce
+      LEFT JOIN course_entity_attribute cea ON ce.entity_id = cea.entity_id
+      LEFT JOIN course_attributes ca ON cea.attribute_id = ca.attribute_id
+      WHERE ce.entity_id IN (${placeholders})
+      GROUP BY ce.entity_id
+    `, courseIds);
+
+    // Get assessments from BOTH course_assignment_entity AND assignment_entity tables
+    let allAssessments = [];
+
+    // Try course_assignment_entity first
+    try {
+      const [[titleAttr]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name='title' LIMIT 1"
+      );
+      const [[descAttr]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name='description' LIMIT 1"
+      );
+      const [[dueDateAttr]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name='dueDate' LIMIT 1"
+      );
+      const [[totalMarksAttr]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name='totalMarks' LIMIT 1"
+      );
+      const [[typeAttr]] = await pool.query(
+        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name='type' LIMIT 1"
+      );
+
+      if (titleAttr) {
+        const [assessments1] = await pool.query(`
+          SELECT
+            cae.entity_id AS assessmentId,
+            cae.course_id AS courseId,
+            cae.created_at AS createdAt,
+            vTitle.value_string AS title,
+            vDesc.value_string AS description,
+            vDue.value_string AS dueDate,
+            vMarks.value_number AS totalMarks,
+            vType.value_string AS type
+          FROM course_assignment_entity cae
+          LEFT JOIN course_assignment_entity_attribute vTitle
+            ON vTitle.entity_id = cae.entity_id AND vTitle.attribute_id = ?
+          LEFT JOIN course_assignment_entity_attribute vDesc
+            ON vDesc.entity_id = cae.entity_id AND vDesc.attribute_id = ?
+          LEFT JOIN course_assignment_entity_attribute vDue
+            ON vDue.entity_id = cae.entity_id AND vDue.attribute_id = ?
+          LEFT JOIN course_assignment_entity_attribute vMarks
+            ON vMarks.entity_id = cae.entity_id AND vMarks.attribute_id = ?
+          LEFT JOIN course_assignment_entity_attribute vType
+            ON vType.entity_id = cae.entity_id AND vType.attribute_id = ?
+          WHERE cae.course_id IN (${placeholders})
+          ORDER BY cae.created_at DESC
+        `, [
+          titleAttr.attribute_id,
+          descAttr?.attribute_id || -1,
+          dueDateAttr?.attribute_id || -1,
+          totalMarksAttr?.attribute_id || -1,
+          typeAttr?.attribute_id || -1,
+          ...courseIds
+        ]);
+        allAssessments = [...allAssessments, ...assessments1];
+      }
+    } catch (e1) {
+      console.log("course_assignment_entity query error:", e1.message);
+    }
+
+    // Also try assignment_entity table (used by assignmentSubmission system)
+    try {
+      const [assessments2] = await pool.query(`
+        SELECT 
+          ae.entity_id AS assessmentId,
+          ae.course_id AS courseId,
+          ae.created_at AS createdAt,
+          ae.entity_name AS title,
+          MAX(CASE WHEN aa.attribute_name='description' THEN aea.value_string END) AS description,
+          MAX(CASE WHEN aa.attribute_name IN ('dueDate', 'deadline') THEN aea.value_string END) AS dueDate,
+          MAX(CASE WHEN aa.attribute_name IN ('totalMarks', 'marks') THEN aea.value_number END) AS totalMarks,
+          MAX(CASE WHEN aa.attribute_name='type' THEN aea.value_string END) AS type
+        FROM assignment_entity ae
+        LEFT JOIN assignment_entity_attribute aea ON aea.entity_id = ae.entity_id
+        LEFT JOIN assignment_attributes aa ON aa.attribute_id = aea.attribute_id
+        WHERE ae.course_id IN (${placeholders})
+        GROUP BY ae.entity_id
+        ORDER BY ae.created_at DESC
+      `, courseIds);
+
+      // Merge but avoid duplicates by assessmentId
+      const existingIds = new Set(allAssessments.map(a => a.assessmentId));
+      for (const a of assessments2) {
+        if (!existingIds.has(a.assessmentId)) {
+          allAssessments.push(a);
+        }
+      }
+    } catch (e2) {
+      console.log("assignment_entity query error:", e2.message);
+    }
+
+    // Filter out assessments without titles
+    allAssessments = allAssessments.filter(a => a.title);
+
+    // Get submissions from assignment_submission_entity (the correct table!)
+    let submissions = [];
+    const assessmentIds = allAssessments.map(a => a.assessmentId);
+
+    if (assessmentIds.length > 0) {
+      try {
+        const assPlaceholders = assessmentIds.map(() => '?').join(',');
+
+        // Query assignment_submission_entity which is the actual submission table
+        const [subs] = await pool.query(`
+          SELECT 
+            ase.entity_id AS submissionId,
+            ase.assignment_id AS assignmentId,
+            ase.student_id AS studentId,
+            MAX(CASE WHEN asa.attribute_name = 'submission_status' THEN asea.value_string END) AS submissionStatus,
+            MAX(CASE WHEN asa.attribute_name = 'grade' THEN asea.value_number END) AS grade,
+            MAX(CASE WHEN asa.attribute_name = 'feedback' THEN asea.value_string END) AS feedback
+          FROM assignment_submission_entity ase
+          LEFT JOIN assignment_submission_entity_attribute asea ON asea.entity_id = ase.entity_id
+          LEFT JOIN assignment_submission_attributes asa ON asa.attribute_id = asea.attribute_id
+          WHERE ase.assignment_id IN (${assPlaceholders})
+            AND ase.student_id = ?
+          GROUP BY ase.entity_id
+        `, [...assessmentIds, studentId]);
+
+        submissions = subs;
+      } catch (subErr) {
+        console.log("assignment_submission_entity query error:", subErr.message);
+        submissions = [];
+      }
+    }
+
+    // Build submission map for quick lookup
+    const submissionMap = {};
+    submissions.forEach(sub => {
+      submissionMap[sub.assignmentId] = sub;
+    });
+
+    // Organize assessments by course
+    const courseAssessments = courses.map(course => {
+      const courseAss = allAssessments.filter(a => Number(a.courseId) === Number(course.courseId));
+
+      return {
+        courseId: course.courseId,
+        code: course.code || '',
+        title: course.title || 'Unknown Course',
+        department: course.department || '',
+        assessmentCount: courseAss.length,
+        assessments: courseAss.map(a => {
+          const submission = submissionMap[a.assessmentId];
+          const hasSubmission = !!submission;
+          const isGraded = submission?.grade !== null && submission?.grade !== undefined;
+          const isSubmitted = hasSubmission && (
+            submission.submissionStatus === 'submitted' ||
+            submission.submissionStatus === 'graded' ||
+            !submission.submissionStatus // If row exists, it means submitted
+          );
+
+          return {
+            assessmentId: a.assessmentId,
+            title: a.title,
+            description: a.description || '',
+            dueDate: a.dueDate || '',
+            totalMarks: a.totalMarks || null,
+            type: a.type || 'assignment',
+            createdAt: a.createdAt,
+            submissionStatus: isGraded ? 'graded' : (isSubmitted ? 'submitted' : 'not_submitted'),
+            isSubmitted: isSubmitted,
+            isGraded: isGraded,
+            grade: isGraded ? submission.grade : null,
+            feedback: submission?.feedback || null
+          };
+        })
+      };
+    });
+
+    // Filter out courses with no assessments if desired (keep all for now)
+    // Sort by course code
+    courseAssessments.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+    // Calculate summary stats
+    const totalAssessments = allAssessments.length;
+    const submittedCount = Object.keys(submissionMap).length;
+    const gradedCount = Object.values(submissionMap).filter(s => s.grade !== null && s.grade !== undefined).length;
+
+    return res.status(200).json({
+      status: "success",
+      data: courseAssessments,
+      summary: {
+        totalCourses: courseAssessments.length,
+        totalAssessments,
+        submittedCount,
+        gradedCount,
+        pendingCount: totalAssessments - submittedCount
+      }
+    });
+
+  } catch (error) {
+    console.error("getMyAssessmentsByCourse error:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 module.exports = {
   getStudentProfile,
   viewCourses,
@@ -872,5 +1130,6 @@ module.exports = {
   getCourseInstructors,
   getCompletedCoursesWithGrades,
   updateEnrollmentWithFinalGrade,
-  getEnrolledCourseMaterials
+  getEnrolledCourseMaterials,
+  getMyAssessmentsByCourse
 };

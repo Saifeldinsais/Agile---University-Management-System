@@ -1,44 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import styles from "./StudentPages.module.css";
 import { API_BASE_URL } from "../../services/config";
 import assignmentSubmissionService from "../../services/assignmentSubmissionService";
 
 // GPA to Letter Grade conversion (standard 4.0 scale)
-// Note: For grades like A+ where the exact letter is needed, use the stored letterGrade field
 const gpaToLetter = (gpa) => {
-  if (gpa >= 4.0) return { letter: "A", color: "#22c55e" };   // A+ and A both = 4.0
-  if (gpa >= 3.7) return { letter: "A-", color: "#22c55e" };  // 3.7
-  if (gpa >= 3.3) return { letter: "B+", color: "#3b82f6" };  // 3.3
-  if (gpa >= 3.0) return { letter: "B", color: "#3b82f6" };   // 3.0
-  if (gpa >= 2.7) return { letter: "B-", color: "#3b82f6" };  // 2.7
-  if (gpa >= 2.3) return { letter: "C+", color: "#f59e0b" };  // 2.3
-  if (gpa >= 2.0) return { letter: "C", color: "#f59e0b" };   // 2.0
-  if (gpa >= 1.7) return { letter: "C-", color: "#f59e0b" };  // 1.7
-  if (gpa >= 1.3) return { letter: "D+", color: "#ef4444" };  // 1.3
-  if (gpa >= 1.0) return { letter: "D", color: "#ef4444" };   // 1.0
-  if (gpa >= 0.7) return { letter: "D-", color: "#ef4444" };  // 0.7
-  return { letter: "F", color: "#6b7280" };                   // 0.0
+  if (gpa >= 4.0) return { letter: "A", color: "#22c55e" };
+  if (gpa >= 3.7) return { letter: "A-", color: "#22c55e" };
+  if (gpa >= 3.3) return { letter: "B+", color: "#3b82f6" };
+  if (gpa >= 3.0) return { letter: "B", color: "#3b82f6" };
+  if (gpa >= 2.7) return { letter: "B-", color: "#3b82f6" };
+  if (gpa >= 2.3) return { letter: "C+", color: "#f59e0b" };
+  if (gpa >= 2.0) return { letter: "C", color: "#f59e0b" };
+  if (gpa >= 1.7) return { letter: "C-", color: "#f59e0b" };
+  if (gpa >= 1.3) return { letter: "D+", color: "#ef4444" };
+  if (gpa >= 1.0) return { letter: "D", color: "#ef4444" };
+  if (gpa >= 0.7) return { letter: "D-", color: "#ef4444" };
+  return { letter: "F", color: "#6b7280" };
 };
 
 function Assessments() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [assessments, setAssessments] = useState([]); // Renamed from assignments
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [currentSubmission, setCurrentSubmission] = useState(null);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  // Grades tab state
-  const [gradesData, setGradesData] = useState({
-    completedCourses: [],
-    gpa: 0,
-    totalCredits: 0
-  });
-  const [gradesLoading, setGradesLoading] = useState(false);
+  // Auth
+  const token = useMemo(() => localStorage.getItem("token"), []);
+  const authHeaders = useMemo(() => {
+    const h = { "Content-Type": "application/json" };
+    if (token) h.Authorization = `Bearer ${token}`;
+    return h;
+  }, [token]);
 
+  // Student info
   const [student] = useState(() => {
     const storedUser = localStorage.getItem("user") || localStorage.getItem("student");
     if (!storedUser) return null;
@@ -50,17 +42,85 @@ function Assessments() {
     }
   });
 
+  // Assessments state
+  const [courseAssessments, setCourseAssessments] = useState([]);
+  const [assessmentSummary, setAssessmentSummary] = useState({
+    totalCourses: 0,
+    totalAssessments: 0,
+    submittedCount: 0,
+    gradedCount: 0,
+    pendingCount: 0
+  });
+  const [loadingAssessments, setLoadingAssessments] = useState(false);
+  const [expandedCourses, setExpandedCourses] = useState({});
+
+  // Submission modal state
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [selectedAssessment, setSelectedAssessment] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Grades state
+  const [gradesData, setGradesData] = useState({
+    completedCourses: [],
+    gpa: 0,
+    totalCredits: 0
+  });
+  const [gradesLoading, setGradesLoading] = useState(false);
+
   useEffect(() => {
     document.title = 'Assessments & Grades - Performance Tracking';
   }, []);
 
   useEffect(() => {
-    if (activeTab === "assignments") {
-      loadAssignments();
+    if (activeTab === "assessments") {
+      loadAssessments();
     } else if (activeTab === "grades") {
       loadGrades();
     }
   }, [activeTab]);
+
+  const loadAssessments = async () => {
+    if (!token) {
+      alert("Please log in to view assessments.");
+      return;
+    }
+
+    setLoadingAssessments(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/student/my-assessments`, {
+        method: "GET",
+        headers: authHeaders,
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || "Failed to fetch assessments");
+
+      setCourseAssessments(Array.isArray(json.data) ? json.data : []);
+      setAssessmentSummary(json.summary || {
+        totalCourses: 0,
+        totalAssessments: 0,
+        submittedCount: 0,
+        gradedCount: 0,
+        pendingCount: 0
+      });
+
+      // Auto-expand all courses with assessments
+      const expanded = {};
+      (json.data || []).forEach(c => {
+        if (c.assessmentCount > 0) {
+          expanded[c.courseId] = true;
+        }
+      });
+      setExpandedCourses(expanded);
+    } catch (err) {
+      console.error("loadAssessments error:", err);
+      setCourseAssessments([]);
+    } finally {
+      setLoadingAssessments(false);
+    }
+  };
 
   const loadGrades = async () => {
     if (!student?.id) return;
@@ -82,91 +142,62 @@ function Assessments() {
     }
   };
 
-  const loadAssignments = async () => {
-    if (!student?.id) {
-      setError("No student session found.");
-      return;
+  const toggleCourseExpand = (courseId) => {
+    setExpandedCourses((prev) => ({
+      ...prev,
+      [courseId]: !prev[courseId],
+    }));
+  };
+
+  const getTypeBadge = (type) => {
+    if (type === "quiz") {
+      return { text: "Quiz", color: "#a78bfa", bg: "#f3e8ff", icon: "📝" };
     }
+    if (type === "exam") {
+      return { text: "Exam", color: "#ef4444", bg: "#fee2e2", icon: "📋" };
+    }
+    return { text: "Assignment", color: "#1e40af", bg: "#dbeafe", icon: "📄" };
+  };
 
-    setLoading(true);
-    setError(null);
+  const getStatusBadge = (assessment) => {
+    if (assessment.isGraded) {
+      return { text: "Graded", color: "#059669", bg: "#d1fae5", icon: "✓" };
+    }
+    if (assessment.isSubmitted) {
+      return { text: "Submitted - Awaiting Grade", color: "#0369a1", bg: "#dbeafe", icon: "📤" };
+    }
+    return { text: "Not Submitted", color: "#d97706", bg: "#fef3c7", icon: "⏳" };
+  };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "No deadline";
     try {
-      const enrollRes = await fetch(`${API_BASE_URL}/student/enrolled/${student.id}`);
-      const enrollData = await enrollRes.json();
-      const enrolled = enrollData.courses || [];
-
-      const approved = enrolled.filter(
-        (c) => c.status?.toLowerCase() === "approved"
-      );
-
-      if (approved.length === 0) {
-        setAssessments([]);
-        setLoading(false);
-        return;
-      }
-
-      const responses = await Promise.all(
-        approved.map((c) =>
-          fetch(`${API_BASE_URL}/student/courses/${c.courseId}/assignments`)
-            .then((r) => r.json())
-            .catch(() => ({ assignments: [], data: [] }))
-        )
-      );
-
-      const allAssignments = responses.flatMap((r) => r.assignments || r.data || []);
-
-      let submissions = [];
-      try {
-        const submissionRes = await assignmentSubmissionService.getStudentAssignments();
-        submissions = submissionRes.data || submissionRes.assignments || [];
-      } catch (err) {
-        console.error("Failed to fetch submissions", err);
-      }
-
-      const assignmentsWithStatus = allAssignments.map((a) => {
-        const submission = submissions.find(
-          (sub) => String(sub.assignment_id) === String(a.assignmentId || a._id)
-        );
-
-        return {
-          ...a,
-          assignment_id: a.assignmentId || a._id,
-          dueDate: a.dueDate || a.deadline,
-          status: a.status || 'active',
-          submission_status: submission?.submission_status || 'not_submitted',
-          submission_id: submission?.submission_id || submission?.entity_id || null
-        };
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric"
       });
-
-      setAssignments(assignmentsWithStatus);
-    } catch (err) {
-      console.error("Error loading assessments:", err);
-      setError("Failed to load assessments. Please try again later.");
-    } finally {
-      setLoading(false);
+    } catch {
+      return dateStr;
     }
   };
 
-  const handleSubmitClick = (assignment) => {
-    setSelectedAssignment(assignment);
-    setCurrentSubmission(null);
-    setShowSubmitModal(true);
-  };
-
-  const handleViewSubmission = async (assignment) => {
-    if (!assignment.submission_id) return;
-
-    setSelectedAssignment(assignment);
-
+  const isOverdue = (dateStr, isSubmitted) => {
+    if (!dateStr || isSubmitted) return false;
     try {
-      const response = await assignmentSubmissionService.getSubmission(assignment.submission_id);
-      const submissionData = response.data || response;
-      setCurrentSubmission(submissionData);
-      setShowSubmitModal(true);
-    } catch (err) {
-      alert("Failed to load submission details");
+      return new Date(dateStr) < new Date();
+    } catch {
+      return false;
     }
+  };
+
+  // Submission handlers
+  const handleSubmitClick = (assessment, course) => {
+    setSelectedAssessment(assessment);
+    setSelectedCourse(course);
+    setUploadedFile(null);
+    setShowSubmitModal(true);
   };
 
   const handleFileChange = (e) => {
@@ -182,39 +213,38 @@ function Assessments() {
       return;
     }
 
+    if (!selectedAssessment) {
+      alert("No assessment selected");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('files', uploadedFile);
-
       await assignmentSubmissionService.submitAssignment(
-        selectedAssessment.id,
-        formData
+        selectedAssessment.assessmentId,
+        [uploadedFile]
       );
 
+      alert("✅ Assignment submitted successfully! Waiting for grade from instructor.");
       setShowSubmitModal(false);
       setUploadedFile(null);
-      alert("Assignment submitted successfully!");
-      await loadAssignments();
+      setSelectedAssessment(null);
+
+      // Reload assessments to update status
+      await loadAssessments();
     } catch (err) {
+      console.error("Submit error:", err);
       alert("Failed to submit: " + (err.response?.data?.message || err.message));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getTypeBadge = (type) => {
-    if (type === "quiz") {
-      return { text: "Quiz", color: "#a78bfa", bg: "#f3e8ff" };
-    }
-    return { text: "Assignment", color: "#1e40af", bg: "#dbeafe" };
-  };
-
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
         <h1>📊 Assessments & Grades</h1>
-        <p>View your assignments, quizzes, exams, and received grades with feedback</p>
+        <p>View assignments from your courses, submit your work, and check grades</p>
       </div>
 
       <div className={styles.pageContent}>
@@ -223,50 +253,365 @@ function Assessments() {
             <div className={styles.section}>
               <h2>Assessments & Performance</h2>
               <p style={{ color: '#6b7280' }}>
-                Track all course assessments including assignments, quizzes, and exams.
-                View your submission status, grades, and instructor feedback once released.
+                View all assessments from your enrolled courses. Submit your work and wait for grades from your instructors.
               </p>
 
               <div className={styles.featureList}>
-                <div
+                <button
+                  type="button"
                   className={styles.feature}
                   onClick={() => setActiveTab("assessments")}
-                  style={{ cursor: 'pointer' }}
+                  style={{
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+                    border: '2px solid #667eea',
+                    width: '100%'
+                  }}
                 >
-                  <h3>📝 Assignments & Quizzes</h3>
-                  <p>View deadlines, submit work, and take quizzes</p>
-                </div>
-                <div className={styles.feature}>
-                  <h3>✅ Exams</h3>
-                  <p>Track exam schedules (coming soon)</p>
-                </div>
-                <div className={styles.feature} onClick={() => setActiveTab("grades")} style={{ cursor: 'pointer' }}>
-                  <h3>⭐ Grades</h3>
-                  <p>View released grades and feedback</p>
-                </div>
+                  <h3>📝 My Assessments</h3>
+                  <p>View assignments & quizzes, submit work, check grades</p>
+                  <span style={{ fontSize: '0.8rem', color: '#667eea', fontWeight: 600 }}>
+                    Click to view by course →
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={styles.feature}
+                  onClick={() => setActiveTab("grades")}
+                  style={{
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    background: 'linear-gradient(135deg, #22c55e15 0%, #16a34a15 100%)',
+                    border: '2px solid #22c55e',
+                    width: '100%'
+                  }}
+                >
+                  <h3>⭐ Final Course Grades</h3>
+                  <p>View completed course grades and GPA</p>
+                  <span style={{ fontSize: '0.8rem', color: '#22c55e', fontWeight: 600 }}>
+                    View transcript →
+                  </span>
+                </button>
               </div>
             </div>
 
-            {/* Other sections unchanged */}
             <div className={styles.section}>
-              <h2>Privacy & Access</h2>
-              <p style={{ color: '#6b7280' }}>
-                All assessments, grades, and feedback are strictly private and visible only to you.
-                No other student can view your grades or feedback.
-              </p>
-            </div>
-
-            <div className={styles.section}>
-              <h2>Features Coming Soon</h2>
-              <ul style={{ color: '#6b7280', lineHeight: '1.8' }}>
-                <li>✓ View assignments and quizzes</li>
-                <li>✓ Submit assignments</li>
-                <li>✓ Take online quizzes</li>
-                <li>✓ View grades and feedback</li>
-                <li>✓ Performance analytics</li>
-              </ul>
+              <h2>How It Works</h2>
+              <div style={{ display: 'grid', gap: '16px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '2rem', background: '#667eea', color: 'white', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</div>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px' }}>Doctor Creates Assessment</h4>
+                    <p style={{ margin: 0, color: '#6b7280' }}>Your instructor creates assignments, quizzes, or exams for your course</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '2rem', background: '#0ea5e9', color: 'white', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</div>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px' }}>You Submit Your Work</h4>
+                    <p style={{ margin: 0, color: '#6b7280' }}>Upload your assignment file before the deadline</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '2rem', background: '#22c55e', color: 'white', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</div>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px' }}>Receive Your Grade</h4>
+                    <p style={{ margin: 0, color: '#6b7280' }}>Doctor grades your work and you see the grade here</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </>
+        )}
+
+        {activeTab === "assessments" && (
+          <div className={styles.section}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+              <h2 style={{ margin: 0 }}>📝 Assessments by Course</h2>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={loadAssessments}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  🔄 Refresh
+                </button>
+                <button
+                  onClick={() => setActiveTab("overview")}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#f3f4f6',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  ← Back
+                </button>
+              </div>
+            </div>
+
+            {loadingAssessments ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
+                <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>Loading assessments from your courses...</p>
+              </div>
+            ) : courseAssessments.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#f9fafb', borderRadius: '12px', border: '2px dashed #e5e7eb' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '16px' }}>📚</div>
+                <h3 style={{ color: '#374151', marginBottom: '8px' }}>No Assessments Found</h3>
+                <p style={{ color: '#6b7280' }}>
+                  Your instructors haven't added any assessments yet, or you're not enrolled in any approved courses.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Summary Stats */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  gap: '16px',
+                  marginBottom: '24px'
+                }}>
+                  <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', padding: '20px', color: 'white', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 700 }}>{assessmentSummary.totalAssessments}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Total Assessments</div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderRadius: '12px', padding: '20px', color: 'white', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 700 }}>{assessmentSummary.pendingCount}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>To Submit</div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)', borderRadius: '12px', padding: '20px', color: 'white', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 700 }}>{assessmentSummary.submittedCount}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Awaiting Grade</div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', borderRadius: '12px', padding: '20px', color: 'white', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 700 }}>{assessmentSummary.gradedCount}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Graded</div>
+                  </div>
+                </div>
+
+                {/* Course Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {courseAssessments.map((course) => (
+                    <div
+                      key={course.courseId}
+                      style={{
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      {/* Course Header */}
+                      <button
+                        onClick={() => toggleCourseExpand(course.courseId)}
+                        style={{
+                          width: '100%',
+                          padding: '20px 24px',
+                          background: expandedCourses[course.courseId]
+                            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          textAlign: 'left',
+                          color: expandedCourses[course.courseId] ? 'white' : '#1f2937'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '1.2rem' }}>
+                            {course.code && <span style={{ opacity: 0.9 }}>{course.code} — </span>}
+                            {course.title}
+                          </div>
+                          <div style={{ opacity: 0.8, fontSize: '0.95rem', marginTop: '6px' }}>
+                            {course.department && `${course.department} • `}
+                            <span style={{ fontWeight: 600 }}>{course.assessmentCount}</span> {course.assessmentCount === 1 ? 'assessment' : 'assessments'}
+                          </div>
+                        </div>
+                        <div style={{
+                          background: expandedCourses[course.courseId] ? 'rgba(255,255,255,0.2)' : '#667eea',
+                          color: 'white',
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.2rem',
+                          transition: 'transform 0.3s ease',
+                          transform: expandedCourses[course.courseId] ? 'rotate(180deg)' : 'rotate(0deg)'
+                        }}>
+                          ▼
+                        </div>
+                      </button>
+
+                      {/* Course Assessments */}
+                      {expandedCourses[course.courseId] && (
+                        <div style={{ padding: '20px 24px', background: 'white' }}>
+                          {course.assessments.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📭</div>
+                              <p style={{ margin: 0 }}>No assessments added by the instructor yet.</p>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                              {course.assessments.map((assessment) => {
+                                const typeBadge = getTypeBadge(assessment.type);
+                                const statusBadge = getStatusBadge(assessment);
+                                const overdue = isOverdue(assessment.dueDate, assessment.isSubmitted);
+
+                                return (
+                                  <div
+                                    key={assessment.assessmentId}
+                                    style={{
+                                      padding: '20px',
+                                      background: assessment.isGraded ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : '#fafafa',
+                                      borderRadius: '12px',
+                                      border: assessment.isGraded ? '2px solid #86efac' : '1px solid #e5e7eb'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                                      {/* Left Side - Assessment Info */}
+                                      <div style={{ flex: 1, minWidth: '250px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                                          <span style={{ fontSize: '1.5rem' }}>{typeBadge.icon}</span>
+                                          <h3 style={{ margin: 0, color: '#1f2937', fontWeight: 700, fontSize: '1.1rem' }}>
+                                            {assessment.title}
+                                          </h3>
+                                          <span style={{
+                                            padding: '4px 12px',
+                                            borderRadius: '20px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 600,
+                                            backgroundColor: typeBadge.bg,
+                                            color: typeBadge.color
+                                          }}>
+                                            {typeBadge.text}
+                                          </span>
+                                        </div>
+
+                                        {assessment.description && (
+                                          <p style={{ color: '#6b7280', margin: '0 0 12px', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                                            {assessment.description}
+                                          </p>
+                                        )}
+
+                                        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '0.9rem' }}>
+                                          <span style={{ color: overdue ? '#ef4444' : '#6b7280', fontWeight: overdue ? 600 : 400 }}>
+                                            📅 Due: {formatDate(assessment.dueDate)}
+                                            {overdue && <span style={{ marginLeft: '8px', color: '#ef4444' }}>⚠️ OVERDUE</span>}
+                                          </span>
+                                          {assessment.totalMarks && (
+                                            <span style={{ color: '#6b7280' }}>💯 {assessment.totalMarks} marks</span>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Right Side - Status & Actions */}
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px', minWidth: '180px' }}>
+                                        {/* Status Badge */}
+                                        <span style={{
+                                          padding: '8px 16px',
+                                          borderRadius: '20px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 600,
+                                          backgroundColor: statusBadge.bg,
+                                          color: statusBadge.color,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '8px'
+                                        }}>
+                                          {statusBadge.icon} {statusBadge.text}
+                                        </span>
+
+                                        {/* Grade Display (if graded) */}
+                                        {assessment.isGraded && (
+                                          <div style={{
+                                            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                            color: 'white',
+                                            padding: '14px 24px',
+                                            borderRadius: '14px',
+                                            textAlign: 'center',
+                                            boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
+                                          }}>
+                                            <div style={{ fontSize: '0.75rem', opacity: 0.9, marginBottom: '4px' }}>YOUR GRADE</div>
+                                            <div style={{ fontSize: '1.8rem', fontWeight: 700 }}>
+                                              {assessment.grade}
+                                              {assessment.totalMarks && (
+                                                <span style={{ fontSize: '1rem', fontWeight: 400, opacity: 0.9 }}> / {assessment.totalMarks}</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Submit Button (if not submitted) */}
+                                        {!assessment.isSubmitted && !assessment.isGraded && (
+                                          <button
+                                            onClick={() => handleSubmitClick(assessment, course)}
+                                            style={{
+                                              padding: '12px 24px',
+                                              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                              color: 'white',
+                                              border: 'none',
+                                              borderRadius: '10px',
+                                              cursor: 'pointer',
+                                              fontWeight: 600,
+                                              fontSize: '0.95rem',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '8px',
+                                              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                                            }}
+                                          >
+                                            📤 Submit Assignment
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Feedback Section */}
+                                    {assessment.feedback && (
+                                      <div style={{
+                                        marginTop: '16px',
+                                        padding: '16px 20px',
+                                        background: 'white',
+                                        borderRadius: '10px',
+                                        borderLeft: '4px solid #0ea5e9'
+                                      }}>
+                                        <div style={{ fontWeight: 600, color: '#0369a1', marginBottom: '8px', fontSize: '0.9rem' }}>
+                                          💬 Instructor Feedback:
+                                        </div>
+                                        <p style={{ margin: 0, color: '#334155', fontSize: '0.95rem', lineHeight: 1.7 }}>
+                                          {assessment.feedback}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
 
         {activeTab === "grades" && (
@@ -275,24 +620,26 @@ function Assessments() {
               <h2 style={{ margin: 0 }}>⭐ Academic Transcript</h2>
               <button
                 onClick={() => setActiveTab("overview")}
-                style={{ padding: '8px 16px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
               >
                 ← Back
               </button>
             </div>
 
             {gradesLoading ? (
-              <p style={{ color: '#6b7280', textAlign: 'center', padding: '40px' }}>Loading grades...</p>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
+                <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>Loading grades...</p>
+              </div>
             ) : (
               <>
-                {/* GPA and Credits Summary */}
+                {/* GPA Summary Cards */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                   gap: '20px',
                   marginBottom: '32px'
                 }}>
-                  {/* GPA Card */}
                   <div style={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     borderRadius: '16px',
@@ -301,18 +648,11 @@ function Assessments() {
                     textAlign: 'center',
                     boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)'
                   }}>
-                    <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>
-                      CUMULATIVE GPA
-                    </div>
-                    <div style={{ fontSize: '3.5rem', fontWeight: '700', lineHeight: 1 }}>
-                      {gradesData.gpa.toFixed(2)}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '8px' }}>
-                      out of 4.00
-                    </div>
+                    <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>CUMULATIVE GPA</div>
+                    <div style={{ fontSize: '3.5rem', fontWeight: '700', lineHeight: 1 }}>{gradesData.gpa.toFixed(2)}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '8px' }}>out of 4.00</div>
                   </div>
 
-                  {/* Credits Card */}
                   <div style={{
                     background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                     borderRadius: '16px',
@@ -321,18 +661,11 @@ function Assessments() {
                     textAlign: 'center',
                     boxShadow: '0 10px 30px rgba(34, 197, 94, 0.3)'
                   }}>
-                    <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>
-                      CREDIT HOURS EARNED
-                    </div>
-                    <div style={{ fontSize: '3.5rem', fontWeight: '700', lineHeight: 1 }}>
-                      {gradesData.totalCredits}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '8px' }}>
-                      total hours
-                    </div>
+                    <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>CREDIT HOURS</div>
+                    <div style={{ fontSize: '3.5rem', fontWeight: '700', lineHeight: 1 }}>{gradesData.totalCredits}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '8px' }}>total earned</div>
                   </div>
 
-                  {/* Courses Card */}
                   <div style={{
                     background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
                     borderRadius: '16px',
@@ -341,440 +674,200 @@ function Assessments() {
                     textAlign: 'center',
                     boxShadow: '0 10px 30px rgba(59, 130, 246, 0.3)'
                   }}>
-                    <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>
-                      COURSES COMPLETED
-                    </div>
-                    <div style={{ fontSize: '3.5rem', fontWeight: '700', lineHeight: 1 }}>
-                      {gradesData.completedCourses.length}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '8px' }}>
-                      passed courses
-                    </div>
+                    <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>COURSES</div>
+                    <div style={{ fontSize: '3.5rem', fontWeight: '700', lineHeight: 1 }}>{gradesData.completedCourses.length}</div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '8px' }}>completed</div>
                   </div>
                 </div>
 
-                {/* Courses Table */}
+                {/* Completed Courses */}
                 {gradesData.completedCourses.length === 0 ? (
-                  <div style={{
-                    textAlign: 'center',
-                    padding: '60px 20px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '12px',
-                    border: '2px dashed #e5e7eb'
-                  }}>
+                  <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#f9fafb', borderRadius: '12px', border: '2px dashed #e5e7eb' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📚</div>
                     <h3 style={{ color: '#374151', marginBottom: '8px' }}>No Completed Courses Yet</h3>
-                    <p style={{ color: '#6b7280' }}>
-                      Your completed courses and grades will appear here once they're finalized.
-                    </p>
+                    <p style={{ color: '#6b7280' }}>Your completed courses and grades will appear here.</p>
                   </div>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{
-                      width: '100%',
-                      borderCollapse: 'separate',
-                      borderSpacing: '0',
-                      fontSize: '0.95rem'
-                    }}>
-                      <thead>
-                        <tr style={{ backgroundColor: '#f8fafc' }}>
-                          <th style={{ padding: '16px', textAlign: 'left', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>Course</th>
-                          <th style={{ padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>Code</th>
-                          <th style={{ padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>Credits</th>
-                          <th style={{ padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>Grade</th>
-                          <th style={{ padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>GPA Points</th>
-                          <th style={{ padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gradesData.completedCourses.map((course, idx) => {
-                          // Use stored letterGrade if available, otherwise calculate from GPA
-                          const storedLetter = course.letterGrade;
-                          const calculatedInfo = gpaToLetter(course.finalGrade);
-                          const displayLetter = storedLetter || calculatedInfo.letter;
-                          const gradeColor = storedLetter
-                            ? (storedLetter.startsWith('A') ? '#22c55e' : storedLetter.startsWith('B') ? '#3b82f6' : storedLetter.startsWith('C') ? '#f59e0b' : storedLetter.startsWith('D') ? '#ef4444' : '#6b7280')
-                            : calculatedInfo.color;
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {gradesData.completedCourses.map((course, idx) => {
+                      const gradeInfo = gpaToLetter(course.finalGrade);
+                      const displayLetter = course.letterGrade || gradeInfo.letter;
 
-                          return (
-                            <tr key={course.enrollmentId || idx} style={{
-                              backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
-                              transition: 'background-color 0.2s'
-                            }}>
-                              <td style={{ padding: '16px', borderBottom: '1px solid #e2e8f0' }}>
-                                <div style={{ fontWeight: '600', color: '#1e293b' }}>{course.title || 'Unknown Course'}</div>
-                                {course.department && (
-                                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>{course.department}</div>
-                                )}
-                              </td>
-                              <td style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', color: '#475569', fontFamily: 'monospace' }}>
-                                {course.code || '-'}
-                              </td>
-                              <td style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>
-                                <span style={{
-                                  backgroundColor: '#e0f2fe',
-                                  color: '#0369a1',
-                                  padding: '4px 12px',
-                                  borderRadius: '20px',
-                                  fontWeight: '600',
-                                  fontSize: '0.9rem'
-                                }}>
-                                  {course.credits} CR
-                                </span>
-                              </td>
-                              <td style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>
-                                <div style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  backgroundColor: `${gradeColor}15`,
-                                  border: `2px solid ${gradeColor}`,
-                                  borderRadius: '12px',
-                                  padding: '8px 16px'
-                                }}>
-                                  <span style={{
-                                    fontSize: '1.4rem',
-                                    fontWeight: '700',
-                                    color: gradeColor
-                                  }}>
-                                    {displayLetter}
-                                  </span>
-                                </div>
-                              </td>
-                              <td style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', fontWeight: '600', color: '#374151' }}>
-                                {course.finalGrade.toFixed(2)}
-                              </td>
-                              <td style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>
-                                <span style={{
-                                  backgroundColor: '#dcfce7',
-                                  color: '#166534',
-                                  padding: '6px 14px',
-                                  borderRadius: '20px',
-                                  fontWeight: '500',
-                                  fontSize: '0.85rem'
-                                }}>
-                                  ✓ {course.status || 'COMPLETED'}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* GPA Scale Reference */}
-                <div style={{
-                  marginTop: '32px',
-                  padding: '20px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <h4 style={{ margin: '0 0 16px 0', color: '#475569', fontSize: '0.95rem' }}>📋 GPA Scale Reference</h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                    {[
-                      { grade: 'A/A+', gpa: '4.0', color: '#22c55e' },
-                      { grade: 'A-', gpa: '3.7', color: '#22c55e' },
-                      { grade: 'B+', gpa: '3.3', color: '#3b82f6' },
-                      { grade: 'B', gpa: '3.0', color: '#3b82f6' },
-                      { grade: 'B-', gpa: '2.7', color: '#3b82f6' },
-                      { grade: 'C+', gpa: '2.3', color: '#f59e0b' },
-                      { grade: 'C', gpa: '2.0', color: '#f59e0b' },
-                      { grade: 'C-', gpa: '1.7', color: '#f59e0b' },
-                      { grade: 'D+', gpa: '1.3', color: '#ef4444' },
-                      { grade: 'D', gpa: '1.0', color: '#ef4444' },
-                      { grade: 'F', gpa: '0.0', color: '#6b7280' }
-                    ].map((item) => (
-                      <div key={item.grade} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 12px',
-                        backgroundColor: 'white',
-                        borderRadius: '6px',
-                        border: '1px solid #e2e8f0',
-                        fontSize: '0.85rem'
-                      }}>
-                        <span style={{ fontWeight: '600', color: item.color }}>{item.grade}</span>
-                        <span style={{ color: '#94a3b8' }}>=</span>
-                        <span style={{ color: '#64748b' }}>{item.gpa}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {activeTab === "assignments" && (
-          <div className={styles.section}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2>📝 My Assignments</h2>
-              <button
-                onClick={() => setActiveTab("overview")}
-                style={{ padding: '8px 16px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}
-              >
-                ← Back
-              </button>
-            </div>
-
-            {loading && <p style={{ color: '#6b7280' }}>Loading assessments...</p>}
-            {error && <p style={{ color: '#ef4444' }}>⚠️ {error}</p>}
-
-            {!loading && !error && assignments.length === 0 && (
-              <p style={{ color: '#6b7280' }}>No assignments available at this time.</p>
-            )}
-
-            {!loading && !error && assessments.length > 0 && (
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {assignments.map((assignment) => {
-                  const deadline = assignment.dueDate || assignment.deadline;
-                  const isSubmitted = assignment.status === 'submitted' || assignment.submission_status === 'submitted';
-
-                  return (
-                    <div
-                      key={assignment.assignment_id}
-                      style={{
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        backgroundColor: '#f9fafb',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                            <h3 style={{ margin: 0, color: '#1f2937' }}>
-                              {item.title}
-                            </h3>
-                            <span style={{
-                              padding: '4px 10px',
+                      return (
+                        <div key={course.enrollmentId || idx} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '20px 24px',
+                          background: 'white',
+                          borderRadius: '12px',
+                          border: '1px solid #e5e7eb',
+                          gap: '20px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <div style={{ flex: 1, minWidth: '200px' }}>
+                            <div style={{ fontWeight: 600, color: '#1f2937', fontSize: '1.05rem' }}>{course.title}</div>
+                            <div style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '4px' }}>
+                              {course.code && `${course.code} • `}{course.credits} Credits
+                            </div>
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px'
+                          }}>
+                            <div style={{
+                              background: `${gradeInfo.color}15`,
+                              border: `2px solid ${gradeInfo.color}`,
                               borderRadius: '12px',
-                              fontSize: '0.8em',
-                              fontWeight: '600',
-                              backgroundColor: badge.bg,
-                              color: badge.color
+                              padding: '10px 20px',
+                              textAlign: 'center'
                             }}>
-                              {badge.text}
+                              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: gradeInfo.color }}>{displayLetter}</div>
+                            </div>
+                            <span style={{
+                              backgroundColor: '#dcfce7',
+                              color: '#166534',
+                              padding: '6px 14px',
+                              borderRadius: '20px',
+                              fontWeight: 500,
+                              fontSize: '0.85rem'
+                            }}>
+                              ✓ Completed
                             </span>
                           </div>
-
-                          {item.course_name && (
-                            <p style={{ color: '#6b7280', fontSize: '0.9em', margin: '4px 0' }}>
-                              <strong>Course:</strong> {item.course_name}
-                            </p>
-                          )}
-
-                          <p style={{ color: '#6b7280', margin: '8px 0', lineHeight: '1.6' }}>
-                            {item.description}
-                          </p>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '12px' }}>
-                            <p style={{ color: '#6b7280', fontSize: '0.9em', margin: 0 }}>
-                              <strong>Due:</strong> {item.dueDate ? new Date(item.dueDate).toLocaleString() : 'No deadline'}
-                            </p>
-                            {item.totalMarks && (
-                              <p style={{ color: '#6b7280', fontSize: '0.9em', margin: 0 }}>
-                                <strong>Worth:</strong> {item.totalMarks} marks
-                              </p>
-                            )}
-                            {hasGrade && (
-                              <p style={{ color: '#059669', fontSize: '0.9em', margin: 0, fontWeight: '600' }}>
-                                <strong>Grade:</strong> {item.grade} / {item.totalMarks}
-                              </p>
-                            )}
-                          </div>
                         </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                          <span style={{
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            fontSize: '0.85em',
-                            fontWeight: '500',
-                            backgroundColor: isSubmitted ? '#d1fae5' : '#fef3c7',
-                            color: isSubmitted ? '#065f46' : '#78350f',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {isSubmitted ? '✓ Submitted' : '⏳ Not Submitted'}
-                          </span>
-
-                          {isSubmitted ? (
-                            <button
-                              onClick={() => handleViewSubmission(assignment)}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#fff',
-                                border: '1px solid #d1d5db',
-                                color: '#374151',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '0.85em',
-                                fontWeight: '500'
-                              }}
-                            >
-                              View / Edit
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleSubmitClick(assignment)}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#3b82f6',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '0.85em',
-                                fontWeight: '500'
-                              }}
-                            >
-                              Submit
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleSubmitClick(item)}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontWeight: '500'
-                            }}
-                          >
-                            {item.type === "quiz" ? "Take Quiz" : isSubmitted ? "View Submission" : "Submit"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
       </div>
 
       {/* Submit Assignment Modal */}
-      {showSubmitModal && selectedAssignment && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
-          }}>
-            <h2 style={{ marginTop: 0, marginBottom: '12px' }}>
-              {currentSubmission ? 'Edit Submission' : 'Submit Assignment'}
-            </h2>
-            <p style={{ color: '#6b7280', marginBottom: '16px' }}>
-              {selectedAssignment.title}
-            </p>
-
-            {currentSubmission && currentSubmission.files && currentSubmission.files.length > 0 && (
-              <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
-                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9em', color: '#4b5563' }}>Current Submission:</h4>
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  {currentSubmission.files.map((file, idx) => (
-                    <div key={idx} style={{ fontSize: '0.9em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>📎</span>
-                      <span>{file.file_name}</span>
-                      <span style={{ color: '#6b7280', fontSize: '0.8em' }}>
-                        ({(file.file_size / 1024).toFixed(1)} KB)
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <p style={{ fontSize: '0.8em', color: '#ef4444', margin: '8px 0 0 0' }}>
-                  * Uploading a new file will replace the existing one(s).
-                </p>
-              </div>
-            )}
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontWeight: '500',
-                color: '#374151'
-              }}>
-                Select File (PDF, Image, or Document)
-              </label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
-                onChange={handleFileChange}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              />
-              {uploadedFile && (
-                <p style={{ color: '#059669', fontSize: '0.9em', marginTop: '8px' }}>
-                  ✓ Selected: {uploadedFile.name}
-                </p>
-              )}
+      {showSubmitModal && selectedAssessment && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+          onClick={() => setShowSubmitModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '500px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              color: 'white',
+              padding: '24px'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '1.3rem' }}>📤 Submit Assignment</h2>
+              <p style={{ margin: '8px 0 0', opacity: 0.9, fontSize: '0.95rem' }}>
+                {selectedCourse?.title}
+              </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowSubmitModal(false);
-                  setUploadedFile(null);
-                }}
-                disabled={submitting}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#e5e7eb',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  opacity: submitting ? 0.6 : 1
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitAssignment}
-                disabled={submitting || !uploadedFile}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  fontWeight: '500',
-                  opacity: submitting || !uploadedFile ? 0.6 : 1
-                }}
-              >
-                {submitting ? 'Submitting...' : 'Submit Assignment'}
-              </button>
+            {/* Modal Content */}
+            <div style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '10px' }}>
+                <h4 style={{ margin: '0 0 8px', color: '#1f2937' }}>{selectedAssessment.title}</h4>
+                {selectedAssessment.description && (
+                  <p style={{ margin: '0 0 12px', color: '#6b7280', fontSize: '0.9rem' }}>{selectedAssessment.description}</p>
+                )}
+                <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', color: '#6b7280' }}>
+                  <span>📅 Due: {formatDate(selectedAssessment.dueDate)}</span>
+                  {selectedAssessment.totalMarks && <span>💯 {selectedAssessment.totalMarks} marks</span>}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 600, color: '#374151' }}>
+                  Upload Your File
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.zip"
+                  onChange={handleFileChange}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '14px',
+                    border: '2px dashed #d1d5db',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    background: '#fafafa'
+                  }}
+                />
+                {uploadedFile && (
+                  <div style={{ marginTop: '12px', padding: '12px', background: '#dcfce7', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>✅</span>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#166534' }}>{uploadedFile.name}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#16a34a' }}>{(uploadedFile.size / 1024).toFixed(1)} KB</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowSubmitModal(false);
+                    setUploadedFile(null);
+                  }}
+                  disabled={submitting}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#f3f4f6',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '10px',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    fontWeight: 500,
+                    opacity: submitting ? 0.6 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitAssignment}
+                  disabled={submitting || !uploadedFile}
+                  style={{
+                    padding: '12px 24px',
+                    background: submitting || !uploadedFile ? '#94a3b8' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: submitting || !uploadedFile ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {submitting ? '⏳ Submitting...' : '✓ Submit Assignment'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

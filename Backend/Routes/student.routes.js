@@ -27,4 +27,7 @@ Router.get(
 // Course Materials - Get all materials for enrolled courses
 Router.get("/my-course-materials", authenticateToken, StudentControllers.getEnrolledCourseMaterials);
 
+// Assessments - Get all assessments for enrolled courses organized by course
+Router.get("/my-assessments", authenticateToken, StudentControllers.getMyAssessmentsByCourse);
+
 module.exports = Router;
