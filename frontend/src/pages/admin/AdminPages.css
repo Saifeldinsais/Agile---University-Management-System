@@ -1,45 +1,51 @@
-/* Admin Pages Styles */
+/* ========================================
+   ADMIN PAGES - CLEAN DESIGN SYSTEM
+   ======================================== */
 
 .admin-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f1e 100%);
-    padding: 2rem;
-    color: #fff;
+    background: #f9fafb;
+    padding: 32px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .admin-header {
-    max-width: 1200px;
-    margin: 0 auto 2rem;
+    max-width: 1000px;
+    margin: 0 auto 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .admin-header .back-link {
-    color: rgba(255, 255, 255, 0.6);
+    color: #6b7280;
     text-decoration: none;
-    font-size: 0.9rem;
-    display: inline-block;
-    margin-bottom: 1rem;
-    transition: color 0.3s;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 16px;
+    transition: color 0.15s;
 }
 
 .admin-header .back-link:hover {
-    color: #a78bfa;
+    color: #1a56db;
 }
 
 .admin-header h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #a78bfa, #818cf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #111827;
 }
 
 .admin-header p {
-    color: rgba(255, 255, 255, 0.6);
+    color: #6b7280;
+    font-size: 0.9375rem;
+    margin: 0;
 }
 
 .admin-content {
-    max-width: 1200px;
+    max-width: 1000px;
     margin: 0 auto;
 }
 
@@ -49,18 +55,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem;
-    color: rgba(255, 255, 255, 0.6);
+    padding: 64px;
+    color: #6b7280;
 }
 
 .loading-state .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(167, 139, 250, 0.2);
-    border-top-color: #a78bfa;
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #1a56db;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
 }
 
 @keyframes spin {
@@ -72,128 +78,133 @@
 /* Error State */
 .error-state {
     text-align: center;
-    padding: 3rem;
-    background: rgba(239, 68, 68, 0.1);
-    border-radius: 12px;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 48px;
+    background: #fef2f2;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+    color: #dc2626;
 }
 
 .error-state button {
-    margin-top: 1rem;
-    padding: 0.75rem 1.5rem;
-    background: #a78bfa;
+    margin-top: 16px;
+    padding: 10px 20px;
+    background: #1a56db;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #fff;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: background 0.15s;
 }
 
 .error-state button:hover {
-    background: #8b5cf6;
-    transform: translateY(-2px);
+    background: #1e429f;
 }
 
 /* Empty State */
 .empty-state {
     text-align: center;
-    padding: 4rem 2rem;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 16px;
-    border: 1px dashed rgba(255, 255, 255, 0.1);
+    padding: 64px 32px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px dashed #e5e7eb;
 }
 
 .empty-state .empty-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
+    display: none;
+    /* No emoji icons */
 }
 
 .empty-state h2 {
-    margin-bottom: 0.5rem;
-    color: #fff;
+    margin: 0 0 8px 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
 }
 
 .empty-state p {
-    color: rgba(255, 255, 255, 0.5);
+    color: #6b7280;
+    font-size: 0.9375rem;
+    margin: 0;
 }
 
 /* Requests Grid */
 .requests-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 1.5rem;
+    gap: 16px;
 }
 
 /* Request Card */
 .request-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s;
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    transition: border-color 0.15s;
 }
 
 .request-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(167, 139, 250, 0.3);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    border-color: #1a56db;
 }
 
 .request-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 16px;
 }
 
 .request-header .badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
 }
 
 .request-header .badge.pending {
-    background: rgba(251, 191, 36, 0.2);
-    color: #fbbf24;
+    background: #fef3c7;
+    color: #d97706;
 }
 
 .request-header .date {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    color: #6b7280;
 }
 
 .request-body {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
 .person-info {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 12px;
     flex: 1;
 }
 
 .person-info .avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
 }
 
 .person-info .avatar.parent {
-    background: linear-gradient(135deg, #a78bfa, #818cf8);
+    background: #1a56db;
 }
 
 .person-info .avatar.student {
-    background: linear-gradient(135deg, #34d399, #10b981);
+    background: #047857;
 }
 
 .person-info .details {
@@ -202,76 +213,77 @@
 }
 
 .person-info .label {
-    font-size: 0.7rem;
+    font-size: 0.6875rem;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.4);
-    margin-bottom: 0.1rem;
+    color: #6b7280;
+    margin-bottom: 2px;
+    letter-spacing: 0.05em;
 }
 
 .person-info .name {
-    font-weight: 600;
-    color: #fff;
-    font-size: 0.95rem;
+    font-weight: 500;
+    color: #111827;
+    font-size: 0.9375rem;
 }
 
 .person-info .email {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8125rem;
+    color: #6b7280;
 }
 
 .link-arrow {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0 0.5rem;
+    gap: 4px;
+    padding: 0 12px;
 }
 
 .link-arrow .relationship {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.6875rem;
+    color: #6b7280;
     text-transform: uppercase;
 }
 
 .link-arrow .arrow {
-    font-size: 1.5rem;
-    color: rgba(167, 139, 250, 0.6);
+    font-size: 1.25rem;
+    color: #9ca3af;
 }
 
 .request-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 8px;
 }
 
 .request-actions .btn {
     flex: 1;
-    padding: 0.75rem;
+    padding: 10px 16px;
     border: none;
-    border-radius: 8px;
-    font-weight: 600;
+    border-radius: 6px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s;
-    font-size: 0.9rem;
+    transition: all 0.15s;
+    font-size: 0.875rem;
 }
 
 .request-actions .btn.approve {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #047857;
     color: #fff;
 }
 
 .request-actions .btn.approve:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    background: #065f46;
 }
 
 .request-actions .btn.reject {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: #fff;
+    color: #dc2626;
+    border: 1px solid #fecaca;
 }
 
 .request-actions .btn.reject:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.3);
+    background: #fef2f2;
+    border-color: #dc2626;
 }
 
 .request-actions .btn:disabled {
@@ -282,7 +294,7 @@
 /* Responsive */
 @media (max-width: 768px) {
     .admin-page {
-        padding: 1rem;
+        padding: 20px;
     }
 
     .requests-grid {

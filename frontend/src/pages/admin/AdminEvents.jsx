@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import eventService from "../../services/eventService";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminNavbar from "../../components/AdminNavbar";
 import "./dashboard.css";
 
 function AdminEvents() {
@@ -161,13 +161,13 @@ function AdminEvents() {
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     return (
-        <div className="admin-page">
-            <AdminSidebar />
+        <div className="admin-layout">
+            <AdminNavbar />
 
             <main className="admin-main">
                 <header className="admin-header">
                     <div>
-                        <h1>📅 Events Management</h1>
+                        <h1>Events</h1>
                         <p className="subtitle">Create and manage university events</p>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>

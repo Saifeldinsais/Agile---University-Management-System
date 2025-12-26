@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import adminEnrollmentsService from "../../services/adminEnrollmentsService";
 import socketService from "../../services/socketService";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminNavbar from "../../components/AdminNavbar";
 import "./dashboard.css";
 
 // Status badge colors
@@ -668,7 +668,7 @@ function AdminEnrollments() {
     const rejectedCount = enrollments.filter((e) => e.status?.toUpperCase() === "REJECTED").length;
 
     return (
-        <div className="admin-page">
+        <div className="admin-layout">
             {/* Toast */}
             {toast && (
                 <Toast
@@ -678,27 +678,14 @@ function AdminEnrollments() {
                 />
             )}
 
-            <AdminSidebar />
+            <AdminNavbar />
 
-            {/* Main content */}
             <main className="admin-main">
                 <header className="admin-header">
                     <div>
-                        <h1>Enrollment Requests</h1>
-                        <p className="subtitle">
-                            Manage student enrollment requests, assign advisors, and approve/reject applications.
-                        </p>
-                        {error && <p style={{ color: "red", marginTop: 4, fontSize: 13 }}>{error}</p>}
-                    </div>
-
-                    <div className="header-right">
-                        <div className="admin-user">
-                            <div className="avatar">A</div>
-                            <div>
-                                <p className="user-name">Admin</p>
-                                <p className="user-role">System Administrator</p>
-                            </div>
-                        </div>
+                        <h1>Enrollments</h1>
+                        <p className="subtitle">Manage student enrollment requests</p>
+                        {error && <p style={{ color: "#dc2626", marginTop: 4, fontSize: 13 }}>{error}</p>}
                     </div>
                 </header>
 

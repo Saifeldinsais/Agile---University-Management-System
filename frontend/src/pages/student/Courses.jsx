@@ -7,10 +7,9 @@ function Courses() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "My Courses - Curriculum & Materials";
+    document.title = "Courses";
   }, []);
 
-  // ===== Auth =====
   const token = useMemo(() => localStorage.getItem("token"), []);
   const authHeaders = useMemo(() => {
     const h = { "Content-Type": "application/json" };
@@ -18,37 +17,24 @@ function Courses() {
     return h;
   }, [token]);
 
-  // ===== Courses =====
+  // State
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
-
-  // ===== Course Materials =====
   const [showMaterialsModal, setShowMaterialsModal] = useState(false);
   const [courseMaterials, setCourseMaterials] = useState([]);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState({});
-
-  // ===== Selection: Course -> Instructors -> OfficeHours =====
   const [selectedCourseId, setSelectedCourseId] = useState("");
-
   const [instructors, setInstructors] = useState([]);
   const [loadingInstructors, setLoadingInstructors] = useState(false);
-
-  // store STAFF ID (API returns staffId)
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [officeHours, setOfficeHours] = useState([]);
   const [loadingHours, setLoadingHours] = useState(false);
-
-  // ===== Meeting request form =====
   const [requestedDate, setRequestedDate] = useState("");
   const [requestedTime, setRequestedTime] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  // chosen slot
   const [selectedSlotId, setSelectedSlotId] = useState(null);
-
-  // ===== Meeting reminders =====
   const [meetings, setMeetings] = useState([]);
   const [loadingMeetings, setLoadingMeetings] = useState(false);
 
@@ -57,19 +43,9 @@ function Courses() {
     [meetings]
   );
 
-  // =========================
-  // Helpers: weekday + next occurrence date
-  // =========================
+  // Helpers
   const dayNameToIndex = (day) => {
-    const map = {
-      Sunday: 0,
-      Monday: 1,
-      Tuesday: 2,
-      Wednesday: 3,
-      Thursday: 4,
-      Friday: 5,
-      Saturday: 6,
-    };
+    const map = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
     return map[String(day || "").trim()] ?? null;
   };
 
@@ -80,27 +56,16 @@ function Courses() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  // baseDateStr:
-  // - if user selected a date, we compute next occurrence from that date
-  // - else compute from today
   const nextDateForDay = (dayName, baseDateStr) => {
     const targetDow = dayNameToIndex(dayName);
     if (targetDow === null) return "";
-
     const base = baseDateStr ? new Date(`${baseDateStr}T00:00:00`) : new Date();
     if (Number.isNaN(base.getTime())) return "";
-
-    // normalize to start of day
     base.setHours(0, 0, 0, 0);
-
     const currentDow = base.getDay();
     let diff = (targetDow - currentDow + 7) % 7;
-
-    // If base is today but we want "next occurrence":
-    // keep diff=0 meaning "today" (useful if selected date matches)
     const result = new Date(base);
     result.setDate(base.getDate() + diff);
-
     return toYMD(result);
   };
 
@@ -111,9 +76,7 @@ function Courses() {
     return d.getDay();
   }, [requestedDate]);
 
-  // =========================
-  // 0) Fetch courses list
-  // =========================
+  // Fetch courses
   useEffect(() => {
     const fetchCourses = async () => {
       try {
@@ -129,31 +92,21 @@ function Courses() {
         setLoadingCourses(false);
       }
     };
-
     fetchCourses();
   }, []);
 
-  // =========================
-  // Fetch Course Materials
-  // =========================
+  // Fetch materials
   const fetchCourseMaterials = async () => {
-    if (!token) {
-      alert("Please log in to view course materials.");
-      return;
-    }
-
+    if (!token) return;
     try {
       setLoadingMaterials(true);
       setShowMaterialsModal(true);
-
       const res = await fetch(`${API_BASE_URL}/student/my-course-materials`, {
         method: "GET",
         headers: authHeaders,
       });
-
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.message || "Failed to fetch materials");
-
       setCourseMaterials(Array.isArray(json.data) ? json.data : []);
     } catch (e) {
       console.error("fetchCourseMaterials error:", e);
@@ -164,10 +117,7 @@ function Courses() {
   };
 
   const toggleCourseExpand = (courseId) => {
-    setExpandedCourses((prev) => ({
-      ...prev,
-      [courseId]: !prev[courseId],
-    }));
+    setExpandedCourses((prev) => ({ ...prev, [courseId]: !prev[courseId] }));
   };
 
   const formatFileSize = (bytes) => {
@@ -177,25 +127,7 @@ function Courses() {
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   };
 
-  const getFileIcon = (fileType) => {
-    if (!fileType) return "📄";
-    const type = fileType.toLowerCase();
-    if (type.includes("pdf")) return "📕";
-    if (type.includes("word") || type.includes("doc")) return "📘";
-    if (type.includes("excel") || type.includes("sheet") || type.includes("xls")) return "📗";
-    if (type.includes("powerpoint") || type.includes("ppt")) return "📙";
-    if (type.includes("image") || type.includes("png") || type.includes("jpg")) return "🖼️";
-    if (type.includes("video") || type.includes("mp4")) return "🎬";
-    if (type.includes("audio") || type.includes("mp3")) return "🎵";
-    if (type.includes("zip") || type.includes("rar")) return "📦";
-    return "📄";
-  };
-
-  // =========================
-  // 1) When course selected -> fetch instructors
-  // GET /student/courses/:courseId/instructors (AUTH)
-  // returns: { status:'success', data:[{staffId,name,email,role,department}] }
-  // =========================
+  // Fetch instructors
   useEffect(() => {
     const fetchInstructors = async () => {
       if (!selectedCourseId) {
@@ -206,119 +138,77 @@ function Courses() {
         setRequestedTime("");
         return;
       }
-
       try {
-        if (!token) {
-          console.warn("Token missing - cannot fetch instructors");
-          setInstructors([]);
-          return;
-        }
-
         setLoadingInstructors(true);
-
-        const res = await fetch(
-          `${API_BASE_URL}/student/courses/${selectedCourseId}/instructors`,
-          { method: "GET", headers: authHeaders }
-        );
-
+        const res = await fetch(`${API_BASE_URL}/student/courses/${selectedCourseId}/instructors`, {
+          method: "GET",
+          headers: authHeaders,
+        });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json.message || "Failed to fetch instructors");
-
-        const data = Array.isArray(json.data) ? json.data : [];
-        setInstructors(data);
-
-        // reset downstream selections
-        setSelectedStaffId("");
-        setOfficeHours([]);
-        setSelectedSlotId(null);
-        setRequestedTime("");
+        if (json.status === "success" && Array.isArray(json.data)) {
+          setInstructors(json.data);
+        } else {
+          setInstructors([]);
+        }
       } catch (e) {
         console.error("fetchInstructors error:", e);
         setInstructors([]);
-        setSelectedStaffId("");
-        setOfficeHours([]);
-        setSelectedSlotId(null);
-        setRequestedTime("");
       } finally {
         setLoadingInstructors(false);
       }
     };
-
     fetchInstructors();
-  }, [selectedCourseId, token, authHeaders]);
+  }, [selectedCourseId, authHeaders]);
 
-  // =========================
-  // 2) When instructor selected -> fetch office hours
-  // GET /student/staff/:staffId/office-hours (AUTH)
-  // returns: { status:'success', data:[{id,day,startTime,endTime,location}] }
-  // =========================
+  // Fetch office hours
   useEffect(() => {
-    const fetchOfficeHours = async () => {
-      const staffIdNum = parseInt(selectedStaffId, 10);
-      if (!Number.isFinite(staffIdNum) || staffIdNum <= 0) {
+    const fetchHours = async () => {
+      if (!selectedStaffId) {
         setOfficeHours([]);
         setSelectedSlotId(null);
         setRequestedTime("");
         return;
       }
-
       try {
-        if (!token) {
-          console.warn("Token missing - cannot fetch office hours");
-          setOfficeHours([]);
-          return;
-        }
-
         setLoadingHours(true);
-
-        const res = await fetch(
-          `${API_BASE_URL}/student/staff/${staffIdNum}/office-hours`,
-          { method: "GET", headers: authHeaders }
-        );
-
+        const res = await fetch(`${API_BASE_URL}/student/staff/${selectedStaffId}/office-hours`, {
+          method: "GET",
+          headers: authHeaders,
+        });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json.message || "Failed to fetch office hours");
-
-        const data = Array.isArray(json.data) ? json.data : [];
-        setOfficeHours(data);
-
-        // reset chosen slot when changing doctor
-        setSelectedSlotId(null);
-        setRequestedTime("");
+        if (json.status === "success" && Array.isArray(json.data)) {
+          setOfficeHours(json.data);
+        } else {
+          setOfficeHours([]);
+        }
       } catch (e) {
-        console.error("fetchOfficeHours error:", e);
+        console.error("fetchHours error:", e);
         setOfficeHours([]);
-        setSelectedSlotId(null);
-        setRequestedTime("");
       } finally {
         setLoadingHours(false);
       }
     };
+    fetchHours();
+  }, [selectedStaffId, authHeaders]);
 
-    fetchOfficeHours();
-  }, [selectedStaffId, token, authHeaders]);
-
-  // =========================
-  // 3) Fetch student's meeting requests (reminders)
-  // GET /student/meeting-requests (AUTH)
-  // =========================
+  // Fetch meetings
   useEffect(() => {
     const fetchMeetings = async () => {
+      if (!token) return;
       try {
-        if (!token) return;
-
         setLoadingMeetings(true);
-
         const res = await fetch(`${API_BASE_URL}/student/meeting-requests`, {
           method: "GET",
           headers: authHeaders,
         });
-
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json.message || "Failed to fetch meeting requests");
-
-        const data = Array.isArray(json.data) ? json.data : [];
-        setMeetings(data);
+        if (Array.isArray(json.data)) {
+          setMeetings(json.data);
+        } else if (Array.isArray(json)) {
+          setMeetings(json);
+        } else {
+          setMeetings([]);
+        }
       } catch (e) {
         console.error("fetchMeetings error:", e);
         setMeetings([]);
@@ -326,110 +216,35 @@ function Courses() {
         setLoadingMeetings(false);
       }
     };
-
     fetchMeetings();
-  }, [token, authHeaders]);
+  }, [authHeaders, token]);
 
-  // =========================
-  // Slot click:
-  // - if date selected -> allow only matching weekday
-  // - if date not selected -> auto-set date to NEXT occurrence of that slot day
-  // =========================
-  const handlePickSlot = (slot) => {
-    const slotDow = dayNameToIndex(slot.day);
-
-    // If user selected a date, enforce weekday match
-    if (selectedDateDow !== null && slotDow !== null && slotDow !== selectedDateDow) {
-      return; // disabled slot should not do anything
+  // Submit meeting request
+  const submitMeetingRequest = async () => {
+    if (!selectedStaffId || !requestedDate || !requestedTime) {
+      alert("Please complete all fields.");
+      return;
     }
-
-    // If date is empty, auto fill with next occurrence date of this slot day
-    if (!requestedDate) {
-      const next = nextDateForDay(slot.day, null);
-      if (next) setRequestedDate(next);
-    }
-
-    setSelectedSlotId(slot.id);
-    setRequestedTime(slot.startTime); // keep backend format
-  };
-
-  // if user changes the date, clear chosen slot if it no longer matches
-  useEffect(() => {
-    if (!requestedDate || !selectedSlotId) return;
-
-    const chosen = officeHours.find((x) => x.id === selectedSlotId);
-    if (!chosen) return;
-
-    const slotDow = dayNameToIndex(chosen.day);
-    if (selectedDateDow !== null && slotDow !== null && slotDow !== selectedDateDow) {
-      setSelectedSlotId(null);
-      setRequestedTime("");
-    }
-  }, [requestedDate, selectedDateDow, selectedSlotId, officeHours]);
-
-  // =========================
-  // 4) Submit meeting request
-  // POST /student/staff/:staffId/meeting-requests (AUTH)
-  // body: { reason, requestedDate, requestedTime }
-  // =========================
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const staffIdNum = parseInt(selectedStaffId, 10);
-
-    if (!selectedCourseId) return alert("Select a course first.");
-    if (!Number.isFinite(staffIdNum) || staffIdNum <= 0)
-      return alert("Select a valid instructor first.");
-
-    if (!requestedDate) return alert("Pick date.");
-    if (!requestedTime) return alert("Pick a time slot from the list (Step 3).");
-    if (!reason.trim()) return alert("Reason is required.");
-    if (!token) return alert("Token missing. Please log in again.");
-
     try {
       setSubmitting(true);
-
-      const payload = {
-        reason: reason.trim(),
-        requestedDate,
-        requestedTime,
-      };
-
-      const res = await fetch(
-        `${API_BASE_URL}/student/staff/${staffIdNum}/meeting-requests`,
-        {
-          method: "POST",
-          headers: authHeaders,
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(json.message || "Failed to submit request");
-        return;
-      }
-
-      alert("✅ Meeting request submitted!");
-
-      // refresh reminders
-      const res2 = await fetch(`${API_BASE_URL}/student/meeting-requests`, {
-        method: "GET",
+      const res = await fetch(`${API_BASE_URL}/student/staff/${selectedStaffId}/meeting-requests`, {
+        method: "POST",
         headers: authHeaders,
+        body: JSON.stringify({
+          date: requestedDate,
+          time: requestedTime,
+          reason: reason || "Office hours visit",
+          officeHourId: selectedSlotId ?? undefined,
+        }),
       });
-      const json2 = await res2.json().catch(() => ({}));
-      if (res2.ok) {
-        const data2 = Array.isArray(json2.data) ? json2.data : [];
-        setMeetings(data2);
-      }
-
-      // clear fields
-      setRequestedDate("");
-      setRequestedTime("");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || "Failed to submit");
+      alert("Request submitted");
       setSelectedSlotId(null);
+      setRequestedTime("");
       setReason("");
-    } catch (e2) {
-      console.error("submit meeting request error:", e2);
+    } catch (e) {
+      console.error("submit meeting request error:", e);
       alert("Error submitting request.");
     } finally {
       setSubmitting(false);
@@ -438,354 +253,207 @@ function Courses() {
 
   return (
     <div className={styles.pageContainer}>
+      {/* Header */}
       <div className={styles.pageHeader}>
-        <h1>📚 My Courses</h1>
-        <p>View your enrolled courses, course materials, and instructor information</p>
+        <h1>Courses</h1>
+        <p>Access materials, instructors, and schedule appointments</p>
       </div>
 
       <div className={styles.pageContent}>
-        {/* ===== top features ===== */}
+        {/* Quick Actions */}
         <div className={styles.section}>
-          <h2>Course Curriculum & Access</h2>
-
+          <h2>Quick Access</h2>
           <div className={styles.featureList}>
             <button
               type="button"
               className={styles.feature}
-              style={{
-                textAlign: "left",
-                cursor: "pointer",
-                background: "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
-                border: "2px solid #667eea",
-                padding: "20px",
-                width: "100%",
-              }}
               onClick={fetchCourseMaterials}
-              title="View Course Materials"
             >
-              <h3>📖 Course Materials</h3>
-              <p>Access syllabi, lecture notes, and course resources</p>
-              <span style={{
-                fontSize: "0.8rem",
-                color: "#667eea",
-                fontWeight: 600,
-                marginTop: "8px",
-                display: "inline-block"
-              }}>
-                Click to view all materials →
-              </span>
+              <h3>Course Materials</h3>
+              <p>Syllabi, lecture notes, resources</p>
             </button>
-
-            <div className={styles.feature}>
-              <h3>👨‍🏫 Course Staff</h3>
-              <p>View assigned Doctors and Teaching Assistants</p>
-            </div>
 
             <button
               type="button"
               className={styles.feature}
-              style={{
-                textAlign: "left",
-                cursor: "pointer",
-                background: "transparent",
-                border: "none",
-                padding: 0,
-              }}
               onClick={() => navigate("/student/schedule")}
-              title="Open Schedule"
             >
-              <h3>📅 Schedule</h3>
-              <p>View class timing and meeting information</p>
+              <h3>Class Schedule</h3>
+              <p>View timings and locations</p>
             </button>
-
-            <div className={styles.feature}>
-              <h3>⭐ Core vs Electives</h3>
-              <p>Distinguish between core and elective courses</p>
-            </div>
           </div>
         </div>
 
-        {/* ======= Sequence UI ======= */}
+        {/* Office Hours Request */}
         <div className={styles.section}>
           <h2>Request Office Hours</h2>
-          <p style={{ color: "#6b7280" }}>
-            Step 1: choose course → Step 2: choose instructor → Step 3: click a time slot (date-aware) → Step 4: submit
-          </p>
 
-          {/* Step 1 */}
-          <div style={{ marginTop: 12 }}>
-            <label style={{ display: "block", marginBottom: 6 }}>1) Select Course</label>
-            {loadingCourses ? (
-              <p style={{ color: "#6b7280" }}>Loading courses...</p>
-            ) : (
-              <select
-                value={selectedCourseId}
-                onChange={(e) => setSelectedCourseId(e.target.value)}
-                style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e5e7eb" }}
-              >
-                <option value="">-- Choose a course --</option>
-                {courses.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.code ? `${c.code} - ` : ""}
-                    {c.title || `Course ${c._id}`}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          <div style={{ display: "grid", gap: "16px", marginTop: "16px" }}>
+            {/* Course Selection */}
+            <div>
+              <label className={styles.label}>Course</label>
+              {loadingCourses ? (
+                <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>Loading...</p>
+              ) : (
+                <select
+                  value={selectedCourseId}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className={styles.select}
+                >
+                  <option value="">Select a course</option>
+                  {courses.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.code ? `${c.code} - ` : ""}{c.title || `Course ${c._id}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-          {/* Step 2 */}
-          <div style={{ marginTop: 12, opacity: selectedCourseId ? 1 : 0.6 }}>
-            <label style={{ display: "block", marginBottom: 6 }}>2) Select Instructor</label>
-
-            {!selectedCourseId ? (
-              <p style={{ color: "#6b7280" }}>Select a course first.</p>
-            ) : loadingInstructors ? (
-              <p style={{ color: "#6b7280" }}>Loading instructors...</p>
-            ) : instructors.length > 0 ? (
-              <select
-                value={selectedStaffId}
-                onChange={(e) => setSelectedStaffId(e.target.value)}
-                style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e5e7eb" }}
-              >
-                <option value="">-- Choose instructor --</option>
-                {instructors.map((d) => (
-                  <option key={d.staffId} value={d.staffId}>
-                    {d.name} (StaffID: {d.staffId})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p style={{ color: "#6b7280" }}>No instructors returned for this course.</p>
-            )}
-          </div>
-
-          {/* Step 4 moved UP: pick date first (so we can disable slots correctly) */}
-          <div style={{ marginTop: 12, opacity: selectedStaffId ? 1 : 0.6 }}>
-            <h3 style={{ margin: "0 0 8px" }}>3) Choose Date</h3>
-            <input
-              type="date"
-              value={requestedDate}
-              onChange={(e) => setRequestedDate(e.target.value)}
-              disabled={!selectedStaffId}
-              style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e5e7eb" }}
-            />
-            <p style={{ marginTop: 6, color: "#6b7280", fontSize: 13 }}>
-              If you don’t pick a date, clicking a slot will auto-fill the next occurrence date.
-            </p>
-          </div>
-
-          {/* Step 3 clickable slots (date-aware) */}
-          <div style={{ marginTop: 12, opacity: selectedStaffId ? 1 : 0.6 }}>
-            <h3 style={{ margin: "0 0 8px" }}>
-              4) Click a Time Slot{" "}
-              {requestedTime ? (
-                <span style={{ fontSize: 13, color: "#6b7280" }}>
-                  (Selected: {requestedTime})
-                </span>
-              ) : null}
-            </h3>
-
-            {!selectedStaffId ? (
-              <p style={{ color: "#6b7280" }}>Select an instructor to load office hours.</p>
-            ) : loadingHours ? (
-              <p style={{ color: "#6b7280" }}>Loading office hours...</p>
-            ) : officeHours.length > 0 ? (
-              <div style={{ display: "grid", gap: 8 }}>
-                {officeHours.map((h) => {
-                  const isSelected = selectedSlotId === h.id;
-
-                  const slotDow = dayNameToIndex(h.day);
-                  const matchesSelectedDate =
-                    selectedDateDow === null || (slotDow !== null && slotDow === selectedDateDow);
-
-                  // label date:
-                  // - if requestedDate exists and matches: show requestedDate
-                  // - else show next occurrence from today (or from requestedDate if you want)
-                  const labelDate = requestedDate && matchesSelectedDate
-                    ? requestedDate
-                    : nextDateForDay(h.day, null);
-
-                  return (
-                    <button
-                      key={h.id}
-                      type="button"
-                      onClick={() => handlePickSlot(h)}
-                      disabled={!matchesSelectedDate}
-                      style={{
-                        border: isSelected ? "2px solid #111827" : "1px solid #e5e7eb",
-                        borderRadius: 12,
-                        padding: 10,
-                        background: !matchesSelectedDate ? "#f9fafb" : isSelected ? "#f3f4f6" : "white",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        cursor: !matchesSelectedDate ? "not-allowed" : "pointer",
-                        textAlign: "left",
-                        opacity: !matchesSelectedDate ? 0.6 : 1,
-                      }}
-                      title={
-                        !matchesSelectedDate
-                          ? "This slot does not match the selected date"
-                          : "Click to select this time slot"
-                      }
-                    >
-                      <div>
-                        <b>{h.day}</b> • {h.startTime} - {h.endTime}
-                        <div style={{ color: "#6b7280", marginTop: 4 }}>📍 {h.location}</div>
-                        <div style={{ color: "#6b7280", marginTop: 4, fontSize: 12 }}>
-                          {requestedDate && matchesSelectedDate
-                            ? `Selected date: ${labelDate}`
-                            : `Next ${h.day}: ${labelDate}`}
-                        </div>
-                      </div>
-
-                      <span style={{ color: isSelected ? "#111827" : "#6b7280", fontWeight: isSelected ? 800 : 400 }}>
-                        {!matchesSelectedDate ? "Unavailable" : isSelected ? "SELECTED" : "Available"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <p style={{ color: "#6b7280" }}>No office hours found for this instructor.</p>
-            )}
-          </div>
-
-          {/* Submit */}
-          <form onSubmit={handleSubmit} style={{ marginTop: 14, opacity: selectedStaffId ? 1 : 0.6 }}>
-            <h3 style={{ margin: "0 0 8px" }}>5) Submit Request</h3>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {/* Instructor Selection */}
+            {selectedCourseId && (
               <div>
-                <label style={{ display: "block", marginBottom: 6 }}>Date</label>
+                <label className={styles.label}>Instructor</label>
+                {loadingInstructors ? (
+                  <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>Loading...</p>
+                ) : instructors.length > 0 ? (
+                  <select
+                    value={selectedStaffId}
+                    onChange={(e) => setSelectedStaffId(e.target.value)}
+                    className={styles.select}
+                  >
+                    <option value="">Select instructor</option>
+                    {instructors.map((i) => (
+                      <option key={i.staffId} value={i.staffId}>
+                        {i.name} ({i.role})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>No instructors found</p>
+                )}
+              </div>
+            )}
+
+            {/* Date Selection */}
+            {selectedStaffId && (
+              <div>
+                <label className={styles.label}>Date</label>
                 <input
-                  value={requestedDate || "Pick date or click slot"}
-                  readOnly
-                  disabled
-                  style={{
-                    width: "100%",
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "1px solid #e5e7eb",
-                    background: "#f9fafb",
-                    color: requestedDate ? "#111827" : "#6b7280",
-                  }}
+                  type="date"
+                  value={requestedDate}
+                  onChange={(e) => setRequestedDate(e.target.value)}
+                  min={toYMD(new Date())}
+                  className={styles.select}
                 />
               </div>
+            )}
 
+            {/* Time Slots */}
+            {selectedStaffId && requestedDate && (
               <div>
-                <label style={{ display: "block", marginBottom: 6 }}>Time (from slot)</label>
+                <label className={styles.label}>Available Time Slots</label>
+                {loadingHours ? (
+                  <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>Loading...</p>
+                ) : officeHours.length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {officeHours
+                      .filter((slot) => {
+                        const slotDow = dayNameToIndex(slot.day_of_week);
+                        return slotDow === selectedDateDow;
+                      })
+                      .map((slot) => (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSlotId(slot.id);
+                            setRequestedTime(slot.start_time);
+                          }}
+                          style={{
+                            padding: "8px 14px",
+                            borderRadius: "6px",
+                            border: selectedSlotId === slot.id ? "2px solid #1a56db" : "1px solid #e5e7eb",
+                            background: selectedSlotId === slot.id ? "#e1effe" : "#fff",
+                            cursor: "pointer",
+                            fontSize: "0.875rem",
+                          }}
+                        >
+                          {slot.start_time} - {slot.end_time}
+                        </button>
+                      ))}
+                  </div>
+                ) : (
+                  <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>No slots for this day</p>
+                )}
+              </div>
+            )}
+
+            {/* Reason */}
+            {requestedTime && (
+              <div>
+                <label className={styles.label}>Reason (optional)</label>
                 <input
-                  value={requestedTime || "Click a slot above"}
-                  readOnly
-                  disabled
-                  style={{
-                    width: "100%",
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "1px solid #e5e7eb",
-                    background: "#f9fafb",
-                    color: requestedTime ? "#111827" : "#6b7280",
-                  }}
+                  type="text"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Brief description"
+                  className={styles.select}
                 />
               </div>
-            </div>
+            )}
 
-            <div style={{ marginTop: 12 }}>
-              <label style={{ display: "block", marginBottom: 6 }}>Reason</label>
-              <input
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Assignment 2 questions"
-                required
-                disabled={!selectedStaffId}
-                style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e5e7eb" }}
-              />
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <button
-                type="submit"
-                disabled={submitting || !selectedStaffId}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "none",
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  background: "#111827",
-                  color: "white",
-                  fontWeight: 600,
-                  opacity: submitting || !selectedStaffId ? 0.7 : 1,
-                }}
-              >
-                {submitting ? "Submitting..." : "Submit Request"}
-              </button>
-            </div>
-          </form>
+            {/* Submit Button */}
+            {requestedTime && (
+              <div>
+                <button
+                  onClick={submitMeetingRequest}
+                  disabled={submitting}
+                  className={styles.btnPrimary}
+                  style={{ opacity: submitting ? 0.6 : 1 }}
+                >
+                  {submitting ? "Submitting..." : "Submit Request"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ===== Reminders ===== */}
-        <div className={styles.section}>
-          <h2>Meeting Reminders</h2>
-          <p style={{ color: "#6b7280" }}>Approved meetings will appear here.</p>
-
-          {loadingMeetings ? (
-            <p style={{ color: "#6b7280" }}>Loading meetings...</p>
-          ) : approvedMeetings.length > 0 ? (
-            <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+        {/* Upcoming Meetings */}
+        {approvedMeetings.length > 0 && (
+          <div className={styles.section}>
+            <h2>Upcoming Meetings</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
               {approvedMeetings.map((m) => {
-                const dt = new Date(`${m.requestedDate}T${m.requestedTime}`);
-                const dateStr = dt.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                });
-                const timeStr = dt.toLocaleTimeString("en-US", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-
+                const dateStr = m.date ? new Date(m.date).toLocaleDateString() : "—";
+                const timeStr = m.time || "—";
                 return (
                   <div
                     key={m.id}
-                    style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 14, background: "white" }}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "14px 16px",
+                      background: "#f9fafb",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb",
+                    }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                      <div>
-                        <h3 style={{ margin: 0 }}>Meeting Approved</h3>
-                        <p style={{ margin: "6px 0", color: "#6b7280" }}>Reason: {m.reason || "—"}</p>
-                        <p style={{ margin: 0 }}>
-                          🗓 {dateStr} • 🕒 {timeStr}
-                        </p>
-                      </div>
-
-                      <div
-                        style={{
-                          alignSelf: "flex-start",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          background: "#d1fae5",
-                          color: "#065f46",
-                          fontWeight: 700,
-                          fontSize: 12,
-                        }}
-                      >
-                        APPROVED
-                      </div>
+                    <div>
+                      <div style={{ fontWeight: 500, color: "#111827" }}>{dateStr} at {timeStr}</div>
+                      {m.reason && <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "2px" }}>{m.reason}</div>}
                     </div>
+                    <span className={styles.badgeSuccess}>Confirmed</span>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <p style={{ color: "#6b7280", marginTop: 12 }}>No approved meetings yet.</p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* ===== Course Materials Modal ===== */}
+      {/* Materials Modal */}
       {showMaterialsModal && (
         <div
           style={{
@@ -794,139 +462,55 @@ function Courses() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.6)",
+            background: "rgba(0, 0, 0, 0.5)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 9999,
+            zIndex: 1000,
             padding: "20px",
           }}
           onClick={() => setShowMaterialsModal(false)}
         >
           <div
             style={{
-              background: "white",
-              borderRadius: "16px",
+              background: "#fff",
+              borderRadius: "12px",
               width: "100%",
-              maxWidth: "900px",
-              maxHeight: "85vh",
+              maxWidth: "700px",
+              maxHeight: "80vh",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div
-              style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                color: "white",
-                padding: "24px 30px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <h2 style={{ margin: 0, fontSize: "1.5rem" }}>📖 Course Materials</h2>
-                <p style={{ margin: "8px 0 0", opacity: 0.9, fontSize: "0.95rem" }}>
-                  Access all materials from your enrolled courses
-                </p>
-              </div>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ margin: 0, fontSize: "1.125rem", fontWeight: 600 }}>Course Materials</h2>
               <button
                 onClick={() => setShowMaterialsModal(false)}
-                style={{
-                  background: "rgba(255,255,255,0.2)",
-                  border: "none",
-                  color: "white",
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "50%",
-                  fontSize: "1.5rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#6b7280" }}
               >
-                ✕
+                ×
               </button>
             </div>
 
             {/* Modal Content */}
-            <div style={{ flex: 1, overflow: "auto", padding: "24px 30px" }}>
+            <div style={{ flex: 1, overflow: "auto", padding: "20px 24px" }}>
               {loadingMaterials ? (
-                <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                  <div style={{ fontSize: "3rem", marginBottom: "16px" }}>⏳</div>
-                  <p style={{ color: "#6b7280", fontSize: "1.1rem" }}>Loading course materials...</p>
-                </div>
+                <p style={{ color: "#6b7280", textAlign: "center", padding: "40px" }}>Loading...</p>
               ) : courseMaterials.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                  <div style={{ fontSize: "4rem", marginBottom: "16px" }}>📚</div>
-                  <h3 style={{ margin: "0 0 10px", color: "#374151" }}>No Materials Available</h3>
-                  <p style={{ color: "#6b7280", margin: 0 }}>
-                    Your instructors haven't uploaded any materials yet.
-                  </p>
-                </div>
+                <p style={{ color: "#6b7280", textAlign: "center", padding: "40px" }}>No materials available</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {/* Summary Stats */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                      gap: "12px",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        background: "#f3f4f6",
-                        padding: "16px",
-                        borderRadius: "12px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "#667eea" }}>
-                        {courseMaterials.length}
-                      </div>
-                      <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Courses</div>
-                    </div>
-                    <div
-                      style={{
-                        background: "#f3f4f6",
-                        padding: "16px",
-                        borderRadius: "12px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "#764ba2" }}>
-                        {courseMaterials.reduce((sum, c) => sum + c.resourceCount, 0)}
-                      </div>
-                      <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Total Resources</div>
-                    </div>
-                  </div>
-
-                  {/* Course Accordion */}
                   {courseMaterials.map((course) => (
-                    <div
-                      key={course.courseId}
-                      style={{
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "12px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {/* Course Header */}
+                    <div key={course.courseId} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
                       <button
                         onClick={() => toggleCourseExpand(course.courseId)}
                         style={{
                           width: "100%",
-                          padding: "18px 20px",
-                          background: expandedCourses[course.courseId]
-                            ? "linear-gradient(135deg, #667eea10 0%, #764ba210 100%)"
-                            : "#fafafa",
+                          padding: "14px 16px",
+                          background: expandedCourses[course.courseId] ? "#f9fafb" : "#fff",
                           border: "none",
                           cursor: "pointer",
                           display: "flex",
@@ -936,89 +520,33 @@ function Courses() {
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#1f2937" }}>
-                            {course.code && <span style={{ color: "#667eea" }}>{course.code}</span>}
-                            {course.code && " — "}
-                            {course.title}
+                          <div style={{ fontWeight: 600, color: "#111827" }}>
+                            {course.code && <span style={{ color: "#1a56db" }}>{course.code}</span>}
+                            {course.code && " — "}{course.title}
                           </div>
-                          <div style={{ color: "#6b7280", fontSize: "0.9rem", marginTop: "4px" }}>
-                            {course.department && `${course.department} • `}
-                            {course.resourceCount} {course.resourceCount === 1 ? "resource" : "resources"}
+                          <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "2px" }}>
+                            {course.resourceCount} {course.resourceCount === 1 ? "file" : "files"}
                           </div>
                         </div>
-                        <div
-                          style={{
-                            background: "#667eea",
-                            color: "white",
-                            width: "32px",
-                            height: "32px",
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "1.2rem",
-                            transition: "transform 0.2s ease",
-                            transform: expandedCourses[course.courseId] ? "rotate(180deg)" : "rotate(0deg)",
-                          }}
-                        >
+                        <span style={{ color: "#6b7280", transform: expandedCourses[course.courseId] ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
                           ▼
-                        </div>
+                        </span>
                       </button>
 
-                      {/* Course Resources */}
                       {expandedCourses[course.courseId] && (
-                        <div style={{ padding: "16px 20px", background: "white" }}>
+                        <div style={{ padding: "12px 16px", borderTop: "1px solid #e5e7eb" }}>
                           {course.resources.length === 0 ? (
-                            <p style={{ color: "#9ca3af", textAlign: "center", margin: 0 }}>
-                              No resources available for this course yet.
-                            </p>
+                            <p style={{ color: "#9ca3af", fontSize: "0.875rem" }}>No files</p>
                           ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                               {course.resources.map((resource) => (
-                                <div
-                                  key={resource.resourceId}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "14px",
-                                    padding: "14px 16px",
-                                    background: "#f9fafb",
-                                    borderRadius: "10px",
-                                    border: "1px solid #e5e7eb",
-                                  }}
-                                >
-                                  <div style={{ fontSize: "2rem" }}>{getFileIcon(resource.fileType)}</div>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div
-                                      style={{
-                                        fontWeight: 600,
-                                        color: "#1f2937",
-                                        marginBottom: "4px",
-                                        whiteSpace: "nowrap",
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                      }}
-                                    >
+                                <div key={resource.resourceId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "#f9fafb", borderRadius: "6px" }}>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: 500, color: "#111827", fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                       {resource.title}
                                     </div>
-                                    {resource.description && (
-                                      <div
-                                        style={{
-                                          color: "#6b7280",
-                                          fontSize: "0.85rem",
-                                          marginBottom: "4px",
-                                          whiteSpace: "nowrap",
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                        }}
-                                      >
-                                        {resource.description}
-                                      </div>
-                                    )}
-                                    <div style={{ color: "#9ca3af", fontSize: "0.8rem" }}>
+                                    <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
                                       {formatFileSize(resource.fileSize)}
-                                      {resource.uploadDate &&
-                                        ` • ${new Date(resource.uploadDate).toLocaleDateString()}`}
                                     </div>
                                   </div>
                                   <a
@@ -1026,20 +554,17 @@ function Courses() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{
-                                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                                      color: "white",
-                                      padding: "10px 18px",
-                                      borderRadius: "8px",
+                                      padding: "6px 12px",
+                                      background: "#1a56db",
+                                      color: "#fff",
+                                      borderRadius: "6px",
                                       textDecoration: "none",
-                                      fontSize: "0.9rem",
-                                      fontWeight: 600,
-                                      whiteSpace: "nowrap",
-                                      transition: "opacity 0.2s ease",
+                                      fontSize: "0.8125rem",
+                                      fontWeight: 500,
+                                      flexShrink: 0,
                                     }}
-                                    onMouseOver={(e) => (e.target.style.opacity = "0.9")}
-                                    onMouseOut={(e) => (e.target.style.opacity = "1")}
                                   >
-                                    ↓ Download
+                                    Download
                                   </a>
                                 </div>
                               ))}

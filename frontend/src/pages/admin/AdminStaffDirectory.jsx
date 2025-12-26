@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import adminStaffService from "../../services/adminStaffService";
 import socketService from "../../services/socketService";
 import TemporaryPasswordModal from "../../components/TemporaryPasswordModal";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminNavbar from "../../components/AdminNavbar";
 import "./dashboard.css";
 
 // Role badge colors
@@ -567,18 +567,17 @@ function AdminStaffDirectory() {
     };
 
     return (
-        <div className="admin-page">
+        <div className="admin-layout">
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            <AdminSidebar />
+            <AdminNavbar />
 
-            {/* Main content */}
             <main className="admin-main">
                 <header className="admin-header">
                     <div>
                         <h1>Staff Directory</h1>
-                        <p className="subtitle">Manage all academic staff members, assign roles, and update profiles.</p>
-                        {error && <p style={{ color: "red", marginTop: 4, fontSize: 13 }}>{error}</p>}
+                        <p className="subtitle">Manage staff members and roles</p>
+                        {error && <p style={{ color: "#dc2626", marginTop: 4, fontSize: 13 }}>{error}</p>}
                     </div>
                     <div className="header-right">
                         <button

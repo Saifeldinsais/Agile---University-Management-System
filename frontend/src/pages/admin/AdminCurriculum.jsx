@@ -1,7 +1,7 @@
 // src/pages/admin/AdminCurriculum.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AdminSidebar from "../../components/AdminSidebar";
+import AdminNavbar from "../../components/AdminNavbar";
 import "./dashboard.css";
 import {
   getCourses,
@@ -139,36 +139,26 @@ function AdminCurriculum() {
   const totalCourses = courses.length;
 
   return (
-    <div className="admin-page">
-      <AdminSidebar />
+    <div className="admin-layout">
+      <AdminNavbar />
 
-      {/* Main content */}
       <main className="admin-main">
         <header className="admin-header">
           <div>
-            <h1>Curriculum Management</h1>
-            <p className="subtitle">
-              Manage the list of courses available for students.
-            </p>
-            {loading && <p>Loading courses…</p>}
-            {error && <p style={{ color: "red" }}>{error}</p>}
+            <h1>Curriculum</h1>
+            <p className="subtitle">Manage courses</p>
+            {loading && <p>Loading...</p>}
+            {error && <p style={{ color: "#dc2626" }}>{error}</p>}
           </div>
 
           <div className="header-right">
             <input
               type="search"
-              placeholder="Search by title, code, department…"
+              placeholder="Search courses..."
               className="search-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <div className="admin-user">
-              <div className="avatar">A</div>
-              <div>
-                <p className="user-name">Admin</p>
-                <p className="user-role">System Administrator</p>
-              </div>
-            </div>
           </div>
         </header>
 
