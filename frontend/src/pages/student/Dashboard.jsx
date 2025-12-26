@@ -61,10 +61,8 @@ function Dashboard() {
 
       const message =
         data.action === "APPROVE"
-          ? "Your enrollment has been approved! 🎉"
-          : `Your enrollment was rejected. ${
-              data.note ? `Reason: ${data.note}` : ""
-            }`;
+          ? "Your enrollment has been approved."
+          : `Your enrollment was rejected. ${data.note ? `Reason: ${data.note}` : ""}`;
 
       setNotification({
         message,
@@ -264,11 +262,11 @@ function Dashboard() {
       (sum, course) => sum + (parseInt(course.credits) || 0),
       0
     );
-    
+
     const completedCourses = enrolled.filter(
       (c) => c.status?.toLowerCase() === "approved"
     ).length;
-    
+
     const pendingCourses = enrolled.filter(
       (c) => c.status?.toLowerCase() === "pending"
     ).length;
@@ -284,9 +282,9 @@ function Dashboard() {
     const averageGrade =
       approvedCourses.length > 0
         ? (
-            approvedCourses.reduce((sum, c) => sum + parseFloat(c.grade), 0) /
-            approvedCourses.length
-          ).toFixed(1)
+          approvedCourses.reduce((sum, c) => sum + parseFloat(c.grade), 0) /
+          approvedCourses.length
+        ).toFixed(1)
         : "--";
 
     return {
@@ -385,9 +383,6 @@ function Dashboard() {
             gap: 10,
           }}
         >
-          <span style={{ fontSize: 20 }}>
-            {notification.type === "success" ? "✓" : "✗"}
-          </span>
           <span>{notification.message}</span>
         </div>
       )}
@@ -397,9 +392,9 @@ function Dashboard() {
         <div className={styles.welcomeSection}>
           <div className={styles.welcomeContent}>
             <h1>
-              Welcome back, {student?.name || student?.username || "Student"}!
+              Welcome, {student?.name || student?.username || "Student"}
             </h1>
-            <p>Your centralized dashboard for all academic activities</p>
+            <p>Academic overview and course management</p>
             <div className={styles.studentInfo}>
               <span>{student?.email || "Not available"}</span>
               {student?.id && <span>Student ID: {student.id}</span>}
@@ -410,17 +405,15 @@ function Dashboard() {
         {/* Tab Navigation */}
         <div className={styles.tabNavigation}>
           <button
-            className={`${styles.tabButton} ${
-              activeTab === "overview" ? styles.active : ""
-            }`}
+            className={`${styles.tabButton} ${activeTab === "overview" ? styles.active : ""
+              }`}
             onClick={() => setActiveTab("overview")}
           >
             Overview
           </button>
           <button
-            className={`${styles.tabButton} ${
-              activeTab === "courses" ? styles.active : ""
-            }`}
+            className={`${styles.tabButton} ${activeTab === "courses" ? styles.active : ""
+              }`}
             onClick={() => setActiveTab("courses")}
           >
             Courses
@@ -435,52 +428,37 @@ function Dashboard() {
               <h2>Academic Summary</h2>
               <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                  <div className={styles.statNumber}>1</div>
                   <div className={styles.statContent}>
                     <h3>{academicStats.totalEnrolled}</h3>
-                    <p>Enrolled Courses</p>
+                    <p>Enrolled</p>
                   </div>
                 </div>
 
                 <div className={styles.statCard}>
-                  <div className={styles.statNumber}>2</div>
                   <div className={styles.statContent}>
                     <h3>{academicStats.completedCourses}</h3>
-                    <p>Approved Courses</p>
+                    <p>Approved</p>
                   </div>
                 </div>
 
                 <div className={styles.statCard}>
-                  <div className={styles.statNumber}>3</div>
                   <div className={styles.statContent}>
                     <h3>{academicStats.pendingCourses}</h3>
-                    <p>Pending Approvals</p>
+                    <p>Pending</p>
                   </div>
                 </div>
 
                 <div className={styles.statCard}>
-                  <div className={styles.statNumber}>4</div>
                   <div className={styles.statContent}>
                     <h3>{completedCoursesData.totalCredits}</h3>
-                    <p>Completed Credits</p>
-                    {completedCoursesData.completedCourses.length > 0 && (
-                      <small style={{ opacity: 0.7 }}>
-                        ({completedCoursesData.completedCourses.length} courses)
-                      </small>
-                    )}
+                    <p>Credits</p>
                   </div>
                 </div>
 
                 <div className={styles.statCard}>
-                  <div className={styles.statNumber}>5</div>
                   <div className={styles.statContent}>
-                    <h3>{parseFloat(completedCoursesData.gpa).toFixed(2)}</h3>
+                    <h3 style={{ color: "#1a56db" }}>{parseFloat(completedCoursesData.gpa).toFixed(2)}</h3>
                     <p>GPA</p>
-                    {completedCoursesData.completedCourses.length > 0 && (
-                      <small style={{ opacity: 0.7 }}>
-                        Weighted by credits
-                      </small>
-                    )}
                   </div>
                 </div>
               </div>
@@ -512,7 +490,7 @@ function Dashboard() {
                               day: "numeric",
                               year:
                                 deadline.dueDate.getFullYear() !==
-                                new Date().getFullYear()
+                                  new Date().getFullYear()
                                   ? "numeric"
                                   : undefined,
                             })}
@@ -526,7 +504,7 @@ function Dashboard() {
                           >
                             {Math.ceil(
                               (deadline.dueDate - new Date()) /
-                                (1000 * 60 * 60 * 24)
+                              (1000 * 60 * 60 * 24)
                             )}{" "}
                             days away
                           </small>
@@ -547,13 +525,10 @@ function Dashboard() {
                     recentNotifications.map((notif) => (
                       <div
                         key={notif.id}
-                        className={`${styles.notificationItem} ${
-                          styles[notif.type]
-                        }`}
+                        className={`${styles.notificationItem} ${styles[notif.type]
+                          }`}
                       >
-                        <div className={styles.notificationIcon}>
-                          {notif.type === "success" ? "✓" : "ℹ"}
-                        </div>
+
                         <div className={styles.notificationContent}>
                           <h4>{notif.title}</h4>
                           <p>{notif.message}</p>
@@ -569,34 +544,15 @@ function Dashboard() {
 
             {/* Quick Access */}
             <section className={styles.section}>
-              <h2>Quick Access</h2>
+              <h2>Quick Actions</h2>
               <div className={styles.quickAccessGrid}>
                 <button
                   className={styles.quickAccessCard}
                   onClick={() => setActiveTab("courses")}
                 >
-                  <div className={styles.qaIcon}>▶</div>
-                  <h3>My Courses</h3>
-                  <p>View and manage your enrolled courses</p>
+                  <h3>Manage Courses</h3>
+                  <p>Enroll, view, or drop courses</p>
                 </button>
-                <div className={styles.quickAccessCard} style={{ cursor: "default" }}>
-                  <div className={styles.qaIcon}>▶</div>
-                  <h3>Assessments</h3>
-                  <p>View your grades and assessments</p>
-                  <span className={styles.soon}>Coming Soon</span>
-                </div>
-                <div className={styles.quickAccessCard} style={{ cursor: "default" }}>
-                  <div className={styles.qaIcon}>▶</div>
-                  <h3>Announcements</h3>
-                  <p>Stay updated with course announcements</p>
-                  <span className={styles.soon}>Coming Soon</span>
-                </div>
-                <div className={styles.quickAccessCard} style={{ cursor: "default" }}>
-                  <div className={styles.qaIcon}>▶</div>
-                  <h3>Facility Services</h3>
-                  <p>Access library, lab, and other services</p>
-                  <span className={styles.soon}>Coming Soon</span>
-                </div>
               </div>
             </section>
           </div>
