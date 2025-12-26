@@ -16,6 +16,14 @@ router.post(
   uploadAssignment.single("file"),
   doctorController.uploadAssignmentAttachment
 );
+
+// ========== Quiz Routes ==========
+router.post("/courses/:courseId/quizzes", doctorController.createCourseQuiz);
+router.get("/courses/:courseId/quizzes", doctorController.getCourseQuizzes);
+router.put("/quizzes/:quizId", doctorController.updateQuiz);
+//////////////////////////////////////////////////////////////////
+
+//=============== Student Routes ===============
 router.get("/courses/:courseId/students", doctorController.getCourseStudents);
 
 // ========== Course Resources Routes ==========

@@ -22,7 +22,7 @@ const gpaToLetter = (gpa) => {
 
 function Assessments() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [assignments, setAssignments] = useState([]);
+  const [assessments, setAssessments] = useState([]); // Renamed from assignments
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -42,7 +42,6 @@ function Assessments() {
   const [student] = useState(() => {
     const storedUser = localStorage.getItem("user") || localStorage.getItem("student");
     if (!storedUser) return null;
-
     try {
       return JSON.parse(storedUser);
     } catch (err) {
@@ -102,7 +101,7 @@ function Assessments() {
       );
 
       if (approved.length === 0) {
-        setAssignments([]);
+        setAssessments([]);
         setLoading(false);
         return;
       }
@@ -111,7 +110,7 @@ function Assessments() {
         approved.map((c) =>
           fetch(`${API_BASE_URL}/student/courses/${c.courseId}/assignments`)
             .then((r) => r.json())
-            .catch(() => ({ assignments: [] }))
+            .catch(() => ({ assignments: [], data: [] }))
         )
       );
 
@@ -142,8 +141,8 @@ function Assessments() {
 
       setAssignments(assignmentsWithStatus);
     } catch (err) {
-      console.error("Error loading assignments:", err);
-      setError("Failed to load assignments. Please try again later.");
+      console.error("Error loading assessments:", err);
+      setError("Failed to load assessments. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -189,7 +188,7 @@ function Assessments() {
       formData.append('files', uploadedFile);
 
       await assignmentSubmissionService.submitAssignment(
-        selectedAssignment.assignment_id,
+        selectedAssessment.id,
         formData
       );
 
@@ -198,10 +197,17 @@ function Assessments() {
       alert("Assignment submitted successfully!");
       await loadAssignments();
     } catch (err) {
-      alert("Failed to submit assignment: " + (err.response?.data?.message || err.message));
+      alert("Failed to submit: " + (err.response?.data?.message || err.message));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const getTypeBadge = (type) => {
+    if (type === "quiz") {
+      return { text: "Quiz", color: "#a78bfa", bg: "#f3e8ff" };
+    }
+    return { text: "Assignment", color: "#1e40af", bg: "#dbeafe" };
   };
 
   return (
@@ -222,25 +228,26 @@ function Assessments() {
               </p>
 
               <div className={styles.featureList}>
-                <div className={styles.feature} onClick={() => setActiveTab("assignments")} style={{ cursor: 'pointer' }}>
-                  <h3>📝 Assignments</h3>
-                  <p>View assignment deadlines and submission status</p>
+                <div
+                  className={styles.feature}
+                  onClick={() => setActiveTab("assessments")}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <h3>📝 Assignments & Quizzes</h3>
+                  <p>View deadlines, submit work, and take quizzes</p>
                 </div>
                 <div className={styles.feature}>
-                  <h3>✅ Quizzes & Exams</h3>
-                  <p>Track quiz and exam schedules</p>
+                  <h3>✅ Exams</h3>
+                  <p>Track exam schedules (coming soon)</p>
                 </div>
                 <div className={styles.feature} onClick={() => setActiveTab("grades")} style={{ cursor: 'pointer' }}>
                   <h3>⭐ Grades</h3>
-                  <p>View released grades with detailed breakdowns</p>
-                </div>
-                <div className={styles.feature}>
-                  <h3>💬 Feedback</h3>
-                  <p>Read instructor feedback per assessment</p>
+                  <p>View released grades and feedback</p>
                 </div>
               </div>
             </div>
 
+            {/* Other sections unchanged */}
             <div className={styles.section}>
               <h2>Privacy & Access</h2>
               <p style={{ color: '#6b7280' }}>
@@ -252,12 +259,11 @@ function Assessments() {
             <div className={styles.section}>
               <h2>Features Coming Soon</h2>
               <ul style={{ color: '#6b7280', lineHeight: '1.8' }}>
-                <li>✓ View all course assessments</li>
-                <li>✓ Track submission deadlines</li>
+                <li>✓ View assignments and quizzes</li>
                 <li>✓ Submit assignments</li>
-                <li>✓ View released grades</li>
-                <li>✓ Read instructor feedback</li>
-                <li>✓ Performance analytics and trends</li>
+                <li>✓ Take online quizzes</li>
+                <li>✓ View grades and feedback</li>
+                <li>✓ Performance analytics</li>
               </ul>
             </div>
           </>
@@ -515,14 +521,14 @@ function Assessments() {
               </button>
             </div>
 
-            {loading && <p style={{ color: '#6b7280' }}>Loading assignments...</p>}
+            {loading && <p style={{ color: '#6b7280' }}>Loading assessments...</p>}
             {error && <p style={{ color: '#ef4444' }}>⚠️ {error}</p>}
 
             {!loading && !error && assignments.length === 0 && (
               <p style={{ color: '#6b7280' }}>No assignments available at this time.</p>
             )}
 
-            {!loading && !error && assignments.length > 0 && (
+            {!loading && !error && assessments.length > 0 && (
               <div style={{ display: 'grid', gap: '16px' }}>
                 {assignments.map((assignment) => {
                   const deadline = assignment.dueDate || assignment.deadline;
@@ -541,28 +547,49 @@ function Assessments() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div style={{ flex: 1 }}>
-                          <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
-                            {assignment.title || 'Assignment'}
-                          </h3>
-                          {assignment.course_name && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <h3 style={{ margin: 0, color: '#1f2937' }}>
+                              {item.title}
+                            </h3>
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.8em',
+                              fontWeight: '600',
+                              backgroundColor: badge.bg,
+                              color: badge.color
+                            }}>
+                              {badge.text}
+                            </span>
+                          </div>
+
+                          {item.course_name && (
                             <p style={{ color: '#6b7280', fontSize: '0.9em', margin: '4px 0' }}>
-                              <strong>Course:</strong> {assignment.course_name}
+                              <strong>Course:</strong> {item.course_name}
                             </p>
                           )}
+
                           <p style={{ color: '#6b7280', margin: '8px 0', lineHeight: '1.6' }}>
-                            {assignment.description || 'No description provided'}
+                            {item.description}
                           </p>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                            <p style={{ color: '#6b7280', fontSize: '0.9em', margin: '0' }}>
-                              <strong>Deadline:</strong> {deadline ? new Date(deadline).toLocaleString() : 'No deadline'}
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                            <p style={{ color: '#6b7280', fontSize: '0.9em', margin: 0 }}>
+                              <strong>Due:</strong> {item.dueDate ? new Date(item.dueDate).toLocaleString() : 'No deadline'}
                             </p>
-                            {assignment.totalMarks && (
-                              <p style={{ color: '#6b7280', fontSize: '0.9em', margin: '0' }}>
-                                <strong>Total Marks:</strong> {assignment.totalMarks}
+                            {item.totalMarks && (
+                              <p style={{ color: '#6b7280', fontSize: '0.9em', margin: 0 }}>
+                                <strong>Worth:</strong> {item.totalMarks} marks
+                              </p>
+                            )}
+                            {hasGrade && (
+                              <p style={{ color: '#059669', fontSize: '0.9em', margin: 0, fontWeight: '600' }}>
+                                <strong>Grade:</strong> {item.grade} / {item.totalMarks}
                               </p>
                             )}
                           </div>
                         </div>
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                           <span style={{
                             padding: '6px 12px',
@@ -609,6 +636,21 @@ function Assessments() {
                               Submit
                             </button>
                           )}
+
+                          <button
+                            onClick={() => handleSubmitClick(item)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {item.type === "quiz" ? "Take Quiz" : isSubmitted ? "View Submission" : "Submit"}
+                          </button>
                         </div>
                       </div>
                     </div>
