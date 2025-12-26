@@ -28,5 +28,6 @@ router.post('/submit', authenticateToken, upload.array('files', 5), assignmentSu
 router.get('/student-assignments', authenticateToken, assignmentSubmissionController.getStudentAssignments);
 router.get('/:submission_id', authenticateToken, assignmentSubmissionController.getSubmission);
 router.get('/assignment/:assignment_id/submissions', authenticateToken, assignmentSubmissionController.getAssignmentSubmissions);
+router.put('/:submission_id/grade', authenticateToken, assignmentSubmissionController.gradeSubmission);
 
 module.exports = router;

@@ -94,8 +94,8 @@ const createCourseAssignment = async (req, res) => {
       description,
       dueDate,
       totalMarks,
-      type: type || "assignment",      
-      status: status || "active",      
+      type: type || "assignment",
+      status: status || "active",
     });
 
     if (!result.success) {
@@ -174,8 +174,8 @@ const updateAssignment = async (req, res) => {
       description,
       dueDate,
       totalMarks,
-      type,     
-      status,   
+      type,
+      status,
     });
 
     if (!result.success) {
@@ -586,6 +586,37 @@ const rejectMeetingRequest = async (req, res) => {
   }
 };
 
+// ===================== Update Student Grade =====================
+const updateStudentGrade = async (req, res) => {
+  try {
+    const { enrollmentId } = req.params;
+    const { grade, letterGrade } = req.body;
+
+    if (!enrollmentId) {
+      return res.status(400).json({ status: "fail", message: "enrollmentId is required" });
+    }
+
+    if (grade === undefined || grade === null) {
+      return res.status(400).json({ status: "fail", message: "grade is required" });
+    }
+
+    const result = await doctorService.updateStudentGrade(enrollmentId, grade, letterGrade);
+
+    if (!result.success) {
+      return res.status(400).json({ status: "fail", message: result.message });
+    }
+
+    return res.status(200).json({ status: "success", message: "Grade updated successfully" });
+  } catch (error) {
+    console.error("Controller Error in updateStudentGrade:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "An unexpected error occurred while updating grade",
+      error: error.message,
+    });
+  }
+};
+
 
 
 module.exports = {
@@ -607,4 +638,5 @@ module.exports = {
   getMeetingRequests,
   approveMeetingRequest,
   rejectMeetingRequest,
+  updateStudentGrade,
 };

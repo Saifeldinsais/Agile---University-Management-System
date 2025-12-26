@@ -292,13 +292,13 @@ const doctorService = {
           staff = { entity_id: newStaffId };
         } catch (createError) {
           console.error(`[getDoctorCourses] Failed to auto-create staff_entity:`, createError.message);
-          
+
           // Log available staff entities for debugging
           const [allStaff] = await pool.query(
             `SELECT entity_id, entity_name FROM staff_entity LIMIT 5`
           );
           console.warn(`[getDoctorCourses] Available staff entities (sample):`, allStaff);
-          
+
           return {
             success: false,
             message: `Doctor is not registered as staff. Please contact your administrator to set up your staff account. (Email: ${rawEmail})`,
@@ -344,103 +344,103 @@ const doctorService = {
   // doctorEntityId comes from login (entities.id)
   // courseId is course_entity.id
   createCourseAssignment: async (doctorEntityId, courseId, payload) => {
-  try {
-    const entityId = Number(doctorEntityId);
-    const cId = Number(courseId);
-    if (!Number.isFinite(entityId) || !Number.isFinite(cId)) {
-      return { success: false, message: "Invalid doctorId or courseId" };
-    }
+    try {
+      const entityId = Number(doctorEntityId);
+      const cId = Number(courseId);
+      if (!Number.isFinite(entityId) || !Number.isFinite(cId)) {
+        return { success: false, message: "Invalid doctorId or courseId" };
+      }
 
-    await ensureCourseAssessmentAttrs(); 
+      await ensureCourseAssessmentAttrs();
 
-    
-    const title = payload?.title;
-    const description = payload?.description;
-    const dueDate = payload?.dueDate || payload?.deadline; 
-    const totalMarks =
-      payload?.totalMarks ?? payload?.totalPoints; 
-    const type = payload?.type || "assignment";
 
-    if (!title || !dueDate) {
-      return { success: false, message: "title and dueDate/deadline are required" };
-    }
+      const title = payload?.title;
+      const description = payload?.description;
+      const dueDate = payload?.dueDate || payload?.deadline;
+      const totalMarks =
+        payload?.totalMarks ?? payload?.totalPoints;
+      const type = payload?.type || "assignment";
 
-    // resolve staffId (same logic)
-    const [[emailAttr]] = await pool.query(
-      "SELECT attribute_id FROM attributes WHERE attribute_name='email' LIMIT 1"
-    );
-    if (!emailAttr) return { success: false, message: "Email attribute not found" };
+      if (!title || !dueDate) {
+        return { success: false, message: "title and dueDate/deadline are required" };
+      }
 
-    const [[emailRow]] = await pool.query(
-      `SELECT value_string AS email
+      // resolve staffId (same logic)
+      const [[emailAttr]] = await pool.query(
+        "SELECT attribute_id FROM attributes WHERE attribute_name='email' LIMIT 1"
+      );
+      if (!emailAttr) return { success: false, message: "Email attribute not found" };
+
+      const [[emailRow]] = await pool.query(
+        `SELECT value_string AS email
        FROM entity_attribute
        WHERE entity_id=? AND attribute_id=? LIMIT 1`,
-      [entityId, emailAttr.attribute_id]
-    );
-    if (!emailRow?.email) return { success: false, message: "Doctor email not found" };
+        [entityId, emailAttr.attribute_id]
+      );
+      if (!emailRow?.email) return { success: false, message: "Doctor email not found" };
 
-    const rawEmail = String(emailRow.email || "").trim().toLowerCase();
-    const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
+      const rawEmail = String(emailRow.email || "").trim().toLowerCase();
+      const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
 
-    const [[staff]] = await pool.query(
-      `SELECT entity_id FROM staff_entity
+      const [[staff]] = await pool.query(
+        `SELECT entity_id FROM staff_entity
        WHERE LOWER(TRIM(entity_name)) = ?
           OR LOWER(TRIM(entity_name)) = ?
        LIMIT 1`,
-      [rawEmail, staffEmail]
-    );
-    if (!staff) return { success: false, message: "Doctor is not registered as staff" };
-
-    const staffId = staff.entity_id;
-
-    // create assessment entity (still using your table)
-    const [ins] = await pool.query(
-      `INSERT INTO course_assignment_entity (course_id, doctor_staff_id)
-       VALUES (?, ?)`,
-      [cId, staffId]
-    );
-    const assignmentId = ins.insertId;
-
-    const getAttrId = async (name) => {
-      const [[row]] = await pool.query(
-        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
-        [name]
+        [rawEmail, staffEmail]
       );
-      return row?.attribute_id || null;
-    };
+      if (!staff) return { success: false, message: "Doctor is not registered as staff" };
 
-    const titleAttrId = await getAttrId("title");
-    const descAttrId = await getAttrId("description");
-    const dueAttrId = await getAttrId("dueDate");
-    const marksAttrId = await getAttrId("totalMarks");
-    const statusAttrId = await getAttrId("status");
-    const typeAttrId = await getAttrId("type"); // ✅ NEW
+      const staffId = staff.entity_id;
 
-    const put = async (attrId, { s = null, n = null, r = null }) => {
-      if (!attrId) return;
-      await pool.query(
-        `INSERT INTO course_assignment_entity_attribute
+      // create assessment entity (still using your table)
+      const [ins] = await pool.query(
+        `INSERT INTO course_assignment_entity (course_id, doctor_staff_id)
+       VALUES (?, ?)`,
+        [cId, staffId]
+      );
+      const assignmentId = ins.insertId;
+
+      const getAttrId = async (name) => {
+        const [[row]] = await pool.query(
+          "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
+          [name]
+        );
+        return row?.attribute_id || null;
+      };
+
+      const titleAttrId = await getAttrId("title");
+      const descAttrId = await getAttrId("description");
+      const dueAttrId = await getAttrId("dueDate");
+      const marksAttrId = await getAttrId("totalMarks");
+      const statusAttrId = await getAttrId("status");
+      const typeAttrId = await getAttrId("type"); // ✅ NEW
+
+      const put = async (attrId, { s = null, n = null, r = null }) => {
+        if (!attrId) return;
+        await pool.query(
+          `INSERT INTO course_assignment_entity_attribute
          (entity_id, attribute_id, value_string, value_number, value_reference)
          VALUES (?, ?, ?, ?, ?)`,
-        [assignmentId, attrId, s, n, r]
-      );
-    };
+          [assignmentId, attrId, s, n, r]
+        );
+      };
 
-    await put(titleAttrId, { s: String(title) });
-    if (description) await put(descAttrId, { s: String(description) });
-    await put(dueAttrId, { s: String(dueDate) });
-    if (totalMarks !== undefined && totalMarks !== null) {
-      await put(marksAttrId, { n: Number(totalMarks) });
+      await put(titleAttrId, { s: String(title) });
+      if (description) await put(descAttrId, { s: String(description) });
+      await put(dueAttrId, { s: String(dueDate) });
+      if (totalMarks !== undefined && totalMarks !== null) {
+        await put(marksAttrId, { n: Number(totalMarks) });
+      }
+      await put(statusAttrId, { s: "active" });
+      await put(typeAttrId, { s: String(type) });
+
+      return { success: true, data: { assignmentId } };
+    } catch (e) {
+      console.error("createCourseAssignment error:", e);
+      return { success: false, message: e.message };
     }
-    await put(statusAttrId, { s: "active" });
-    await put(typeAttrId, { s: String(type) });
-
-    return { success: true, data: { assignmentId } };
-  } catch (e) {
-    console.error("createCourseAssignment error:", e);
-    return { success: false, message: e.message };
-  }
-},
+  },
 
 
   // ===================== View Course Assignments (Student) =====================
@@ -514,7 +514,7 @@ const doctorService = {
           marksAttrId || -1,
           statusAttrId || -1,
           attachmentsAttrId || -1,
-           typeAttrId || -1,
+          typeAttrId || -1,
           cId,
         ]
       );
@@ -527,83 +527,83 @@ const doctorService = {
   },
 
   updateCourseAssignment: async (doctorEntityId, assignmentId, payload) => {
-  try {
-    const aId = Number(assignmentId);
-    if (!Number.isFinite(aId)) return { success: false, message: "Invalid assignmentId" };
+    try {
+      const aId = Number(assignmentId);
+      if (!Number.isFinite(aId)) return { success: false, message: "Invalid assignmentId" };
 
-    const { title, description, dueDate, totalMarks, type, status } = payload || {};
+      const { title, description, dueDate, totalMarks, type, status } = payload || {};
 
-    if (
-      title === undefined &&
-      description === undefined &&
-      dueDate === undefined &&
-      totalMarks === undefined &&
-      type === undefined &&
-      status === undefined
-    ) {
-      return { success: false, message: "No fields to update" };
-    }
+      if (
+        title === undefined &&
+        description === undefined &&
+        dueDate === undefined &&
+        totalMarks === undefined &&
+        type === undefined &&
+        status === undefined
+      ) {
+        return { success: false, message: "No fields to update" };
+      }
 
-    const getAttrId = async (name) => {
-      const [[row]] = await pool.query(
-        "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
-        [name]
-      );
-      return row?.attribute_id || null;
-    };
+      const getAttrId = async (name) => {
+        const [[row]] = await pool.query(
+          "SELECT attribute_id FROM course_assignment_attributes WHERE attribute_name=? LIMIT 1",
+          [name]
+        );
+        return row?.attribute_id || null;
+      };
 
-    const titleAttrId = await getAttrId("title");
-    const descAttrId = await getAttrId("description");
-    const dueAttrId = await getAttrId("dueDate");
-    const marksAttrId = await getAttrId("totalMarks");
-    const typeAttrId = await getAttrId("type");       // ✅ NEW
-    const statusAttrId = await getAttrId("status");   // ✅ optional (publish/draft/active/closed)
-    const updatedAtAttrId = await getAttrId("updatedAt");
+      const titleAttrId = await getAttrId("title");
+      const descAttrId = await getAttrId("description");
+      const dueAttrId = await getAttrId("dueDate");
+      const marksAttrId = await getAttrId("totalMarks");
+      const typeAttrId = await getAttrId("type");       // ✅ NEW
+      const statusAttrId = await getAttrId("status");   // ✅ optional (publish/draft/active/closed)
+      const updatedAtAttrId = await getAttrId("updatedAt");
 
-    const upsert = async (attrId, { s = null, n = null }) => {
-      if (!attrId) return;
-      const [[existing]] = await pool.query(
-        `SELECT value_id FROM course_assignment_entity_attribute
+      const upsert = async (attrId, { s = null, n = null }) => {
+        if (!attrId) return;
+        const [[existing]] = await pool.query(
+          `SELECT value_id FROM course_assignment_entity_attribute
          WHERE entity_id=? AND attribute_id=? LIMIT 1`,
-        [aId, attrId]
-      );
+          [aId, attrId]
+        );
 
-      if (existing?.value_id) {
-        await pool.query(
-          `UPDATE course_assignment_entity_attribute
+        if (existing?.value_id) {
+          await pool.query(
+            `UPDATE course_assignment_entity_attribute
            SET value_string=?, value_number=?
            WHERE value_id=?`,
-          [s, n, existing.value_id]
-        );
-      } else {
-        await pool.query(
-          `INSERT INTO course_assignment_entity_attribute
+            [s, n, existing.value_id]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO course_assignment_entity_attribute
            (entity_id, attribute_id, value_string, value_number)
            VALUES (?, ?, ?, ?)`,
-          [aId, attrId, s, n]
-        );
-      }
-    };
+            [aId, attrId, s, n]
+          );
+        }
+      };
 
-    if (title !== undefined) await upsert(titleAttrId, { s: title ? String(title) : "" , n: null});
-    if (description !== undefined) await upsert(descAttrId, { s: description ? String(description) : "", n: null });
-    if (dueDate !== undefined) await upsert(dueAttrId, { s: dueDate ? String(dueDate) : "", n: null });
-    if (totalMarks !== undefined) await upsert(marksAttrId, { s: null, n: Number(totalMarks) });
+      if (title !== undefined) await upsert(titleAttrId, { s: title ? String(title) : "", n: null });
+      if (description !== undefined) await upsert(descAttrId, { s: description ? String(description) : "", n: null });
+      if (dueDate !== undefined) await upsert(dueAttrId, { s: dueDate ? String(dueDate) : "", n: null });
+      if (totalMarks !== undefined) await upsert(marksAttrId, { s: null, n: Number(totalMarks) });
 
-    // ✅ NEW: type (assignment/quiz/exam/project)
-    if (type !== undefined) await upsert(typeAttrId, { s: String(type), n: null });
+      // ✅ NEW: type (assignment/quiz/exam/project)
+      if (type !== undefined) await upsert(typeAttrId, { s: String(type), n: null });
 
-    // ✅ optional: status (draft/published/active/closed...)
-    if (status !== undefined) await upsert(statusAttrId, { s: String(status), n: null });
+      // ✅ optional: status (draft/published/active/closed...)
+      if (status !== undefined) await upsert(statusAttrId, { s: String(status), n: null });
 
-    await upsert(updatedAtAttrId, { s: new Date().toISOString(), n: null });
+      await upsert(updatedAtAttrId, { s: new Date().toISOString(), n: null });
 
-    return { success: true };
-  } catch (e) {
-    console.error("updateCourseAssignment error:", e);
-    return { success: false, message: e.message };
-  }
-},
+      return { success: true };
+    } catch (e) {
+      console.error("updateCourseAssignment error:", e);
+      return { success: false, message: e.message };
+    }
+  },
 
   addAssignmentAttachment: async (assignmentId, attachment) => {
     try {
@@ -1006,36 +1006,36 @@ const doctorService = {
     }
   },
   getDoctorByEmail: async (email) => {
-  try {
-    if (!email) return { success: false, message: "email is required" };
+    try {
+      if (!email) return { success: false, message: "email is required" };
 
-    const rawEmail = String(email).trim().toLowerCase();
-    const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
+      const rawEmail = String(email).trim().toLowerCase();
+      const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
 
-    // 1) find staff entity
-    const [[staff]] = await pool.query(
-      `
+      // 1) find staff entity
+      const [[staff]] = await pool.query(
+        `
       SELECT entity_id, entity_type, entity_name
       FROM staff_entity
       WHERE LOWER(TRIM(entity_name)) = ?
          OR LOWER(TRIM(entity_name)) = ?
       LIMIT 1
       `,
-      [rawEmail, staffEmail]
-    );
+        [rawEmail, staffEmail]
+      );
 
-    if (!staff) {
-      return {
-        success: false,
-        message: `Doctor not found in staff_entity (searched: ${rawEmail} / ${staffEmail})`,
-      };
-    }
+      if (!staff) {
+        return {
+          success: false,
+          message: `Doctor not found in staff_entity (searched: ${rawEmail} / ${staffEmail})`,
+        };
+      }
 
-    const staffId = staff.entity_id;
+      const staffId = staff.entity_id;
 
-    // 2) pivot staff EAV attributes
-    const [rows] = await pool.query(
-      `
+      // 2) pivot staff EAV attributes
+      const [rows] = await pool.query(
+        `
       SELECT
         se.entity_id AS staffId,
         se.entity_type AS entityType,
@@ -1060,110 +1060,110 @@ const doctorService = {
       GROUP BY se.entity_id
       LIMIT 1
       `,
-      [staffId]
-    );
+        [staffId]
+      );
 
-    const doc = rows?.[0];
-    if (!doc) return { success: false, message: "Staff attributes not found" };
+      const doc = rows?.[0];
+      if (!doc) return { success: false, message: "Staff attributes not found" };
 
-    let roles = [];
-    try { roles = doc.rolesJson ? JSON.parse(doc.rolesJson) : []; } catch {}
+      let roles = [];
+      try { roles = doc.rolesJson ? JSON.parse(doc.rolesJson) : []; } catch { }
 
-    return {
-      success: true,
-      data: {
-        staffId: doc.staffId,
-        entityType: doc.entityType,
-        entityName: doc.entityName,
-        name: doc.name || null,
-        email: doc.email || rawEmail,
-        phone: doc.phone || null,
-        officeLocation: doc.officeLocation || null,
-        specialization: doc.specialization || null,
-        bio: doc.bio || null,
-        role: doc.role || staff.entity_type || null,
-        department: doc.department || null,
-        status: doc.status || null,
-        hireDate: doc.hireDate || null,
-        roles,
-      },
-    };
-  } catch (e) {
-    console.error("getDoctorByEmail error:", e);
-    return { success: false, message: e.message };
-  }
-},
-updateMyDoctorProfile: async (userEntityId, payload) => {
-  try {
-    const entityId = Number(userEntityId);
-    if (!Number.isFinite(entityId)) {
-      return { success: false, message: "Invalid user entity id" };
+      return {
+        success: true,
+        data: {
+          staffId: doc.staffId,
+          entityType: doc.entityType,
+          entityName: doc.entityName,
+          name: doc.name || null,
+          email: doc.email || rawEmail,
+          phone: doc.phone || null,
+          officeLocation: doc.officeLocation || null,
+          specialization: doc.specialization || null,
+          bio: doc.bio || null,
+          role: doc.role || staff.entity_type || null,
+          department: doc.department || null,
+          status: doc.status || null,
+          hireDate: doc.hireDate || null,
+          roles,
+        },
+      };
+    } catch (e) {
+      console.error("getDoctorByEmail error:", e);
+      return { success: false, message: e.message };
     }
+  },
+  updateMyDoctorProfile: async (userEntityId, payload) => {
+    try {
+      const entityId = Number(userEntityId);
+      if (!Number.isFinite(entityId)) {
+        return { success: false, message: "Invalid user entity id" };
+      }
 
-    // 1) get email from entities EAV
-    const emailAttrId = await getGlobalAttrId("email");
-    if (!emailAttrId) {
-      return { success: false, message: "Global email attribute not found" };
-    }
+      // 1) get email from entities EAV
+      const emailAttrId = await getGlobalAttrId("email");
+      if (!emailAttrId) {
+        return { success: false, message: "Global email attribute not found" };
+      }
 
-    const [[emailRow]] = await pool.query(
-      `SELECT value_string AS email
+      const [[emailRow]] = await pool.query(
+        `SELECT value_string AS email
        FROM entity_attribute
        WHERE entity_id=? AND attribute_id=? LIMIT 1`,
-      [entityId, emailAttrId]
-    );
+        [entityId, emailAttrId]
+      );
 
-    const rawEmail = String(emailRow?.email || "").trim().toLowerCase();
-    if (!rawEmail) return { success: false, message: "Email not found for current user" };
+      const rawEmail = String(emailRow?.email || "").trim().toLowerCase();
+      if (!rawEmail) return { success: false, message: "Email not found for current user" };
 
-    // 2) map email -> staff_entity
-    const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
+      // 2) map email -> staff_entity
+      const staffEmail = rawEmail.startsWith("staff-") ? rawEmail : `staff-${rawEmail}`;
 
-    const [[staff]] = await pool.query(
-      `SELECT entity_id
+      const [[staff]] = await pool.query(
+        `SELECT entity_id
        FROM staff_entity
        WHERE LOWER(TRIM(entity_name)) = ?
           OR LOWER(TRIM(entity_name)) = ?
        LIMIT 1`,
-      [rawEmail, staffEmail]
-    );
+        [rawEmail, staffEmail]
+      );
 
-    if (!staff) {
-      return { success: false, message: "Doctor is not registered as staff" };
+      if (!staff) {
+        return { success: false, message: "Doctor is not registered as staff" };
+      }
+
+      const staffId = staff.entity_id;
+
+      // 3) upsert editable staff attributes
+      const editable = [
+        ["name", payload?.name],
+        ["phone", payload?.phone],
+        ["officePhone", payload?.officePhone],
+        ["officeLocation", payload?.officeLocation],
+        ["bio", payload?.bio],
+        ["specialization", payload?.specialization],
+      ];
+
+      for (const [attrName, value] of editable) {
+        if (value === undefined || value === null) continue;
+        const attrId = await getStaffAttrId(attrName);
+        await upsertStaffValue(staffId, attrId, String(value));
+      }
+
+      // 4) return updated profile
+      const after = await doctorService.getDoctorByEmail(rawEmail);
+      if (!after.success) {
+        return { success: true, message: "Profile updated", data: { staffId } };
+      }
+
+      return { success: true, message: "Profile updated", data: after.data };
+    } catch (e) {
+      console.error("updateMyDoctorProfile service error:", e);
+      return { success: false, message: e.message };
     }
+  },
 
-    const staffId = staff.entity_id;
-
-    // 3) upsert editable staff attributes
-    const editable = [
-      ["name", payload?.name],
-      ["phone", payload?.phone],
-      ["officePhone", payload?.officePhone],
-      ["officeLocation", payload?.officeLocation],
-      ["bio", payload?.bio],
-      ["specialization", payload?.specialization],
-    ];
-
-    for (const [attrName, value] of editable) {
-      if (value === undefined || value === null) continue;
-      const attrId = await getStaffAttrId(attrName);
-      await upsertStaffValue(staffId, attrId, String(value));
-    }
-
-    // 4) return updated profile
-    const after = await doctorService.getDoctorByEmail(rawEmail);
-    if (!after.success) {
-      return { success: true, message: "Profile updated", data: { staffId } };
-    }
-
-    return { success: true, message: "Profile updated", data: after.data };
-  } catch (e) {
-    console.error("updateMyDoctorProfile service error:", e);
-    return { success: false, message: e.message };
-  }
-},
-
- getMyOfficeHours: async (doctorEntityId) => {
+  getMyOfficeHours: async (doctorEntityId) => {
     try {
       const staffId = await getStaffIdFromUserEntityId(doctorEntityId);
       if (!staffId) return { success: false, message: "Doctor staff mapping not found" };
@@ -1247,21 +1247,137 @@ updateMyDoctorProfile: async (userEntityId, payload) => {
     }
   },
   updateMeetingRequestStatus: async (requestId, status) => {
-  try {
-    await pool.query(
-      `UPDATE doctor_meeting_requests
+    try {
+      await pool.query(
+        `UPDATE doctor_meeting_requests
        SET status = ?
        WHERE id = ?`,
-      [status, requestId]
-    );
+        [status, requestId]
+      );
 
-    return { success: true };
-  } catch (e) {
-    console.error("updateMeetingRequestStatus error:", e);
-    return { success: false, message: e.message };
+      return { success: true };
+    } catch (e) {
+      console.error("updateMeetingRequestStatus error:", e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // ===================== Update Student Grade =====================
+  updateStudentGrade: async (enrollmentId, grade, letterGrade) => {
+    try {
+      const eId = Number(enrollmentId);
+      if (!Number.isFinite(eId)) {
+        return { success: false, message: "Invalid enrollmentId" };
+      }
+
+      // Get grade attribute ID
+      const gradeAttr = await EnrollmentAttribute.getAttributeByName("grade");
+      if (!gradeAttr) {
+        return { success: false, message: "Grade attribute not found in enrollment" };
+      }
+
+      // Get status attribute ID
+      const statusAttr = await EnrollmentAttribute.getAttributeByName("status");
+      if (!statusAttr) {
+        console.warn("Status attribute not found in enrollment, cannot mark as completed");
+      }
+
+      // Ensure letterGrade attribute exists
+      let letterGradeAttr = await EnrollmentAttribute.getAttributeByName("letterGrade");
+      if (!letterGradeAttr) {
+        // Create the attribute if it doesn't exist
+        const [result] = await pool.query(
+          "INSERT INTO enrollment_attributes (attribute_name, data_type) VALUES (?, ?)",
+          ["letterGrade", "string"]
+        );
+        letterGradeAttr = { attribute_id: result.insertId };
+      }
+
+      // Check if enrollment exists
+      const [[enrollment]] = await pool.query(
+        "SELECT entity_id FROM enrollment_entity WHERE entity_id = ? LIMIT 1",
+        [eId]
+      );
+
+      if (!enrollment) {
+        return { success: false, message: "Enrollment not found" };
+      }
+
+      // 1. Upsert grade value (numeric GPA)
+      const [[existingGrade]] = await pool.query(
+        `SELECT value_id FROM enrollment_entity_attribute 
+         WHERE entity_id = ? AND attribute_id = ? LIMIT 1`,
+        [eId, gradeAttr.attribute_id]
+      );
+
+      if (existingGrade?.value_id) {
+        await pool.query(
+          `UPDATE enrollment_entity_attribute SET value_number = ? WHERE value_id = ?`,
+          [grade, existingGrade.value_id]
+        );
+      } else {
+        await pool.query(
+          `INSERT INTO enrollment_entity_attribute (entity_id, attribute_id, value_number) 
+           VALUES (?, ?, ?)`,
+          [eId, gradeAttr.attribute_id, grade]
+        );
+      }
+
+      // 2. Upsert letterGrade value (string like "A+", "A", "A-", etc.)
+      if (letterGrade && letterGradeAttr) {
+        const [[existingLetterGrade]] = await pool.query(
+          `SELECT value_id FROM enrollment_entity_attribute 
+           WHERE entity_id = ? AND attribute_id = ? LIMIT 1`,
+          [eId, letterGradeAttr.attribute_id]
+        );
+
+        if (existingLetterGrade?.value_id) {
+          await pool.query(
+            `UPDATE enrollment_entity_attribute SET value_string = ? WHERE value_id = ?`,
+            [letterGrade, existingLetterGrade.value_id]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO enrollment_entity_attribute (entity_id, attribute_id, value_string) 
+             VALUES (?, ?, ?)`,
+            [eId, letterGradeAttr.attribute_id, letterGrade]
+          );
+        }
+      }
+
+      // 3. Update status to 'COMPLETED' or 'FAILED'
+      if (statusAttr) {
+        const newStatus = grade > 0 ? 'COMPLETED' : 'FAILED';
+
+        const [[existingStatus]] = await pool.query(
+          `SELECT value_id FROM enrollment_entity_attribute 
+           WHERE entity_id = ? AND attribute_id = ? LIMIT 1`,
+          [eId, statusAttr.attribute_id]
+        );
+
+        if (existingStatus?.value_id) {
+          await pool.query(
+            `UPDATE enrollment_entity_attribute SET value_string = ? WHERE value_id = ?`,
+            [newStatus, existingStatus.value_id]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO enrollment_entity_attribute (entity_id, attribute_id, value_string) 
+             VALUES (?, ?, ?)`,
+            [eId, statusAttr.attribute_id, newStatus]
+          );
+        }
+      }
+
+      const msg = grade > 0
+        ? "Grade updated and course marked as COMPLETED"
+        : "Grade updated (Course marked as FAILED)";
+      return { success: true, message: msg };
+    } catch (e) {
+      console.error("updateStudentGrade error:", e);
+      return { success: false, message: e.message };
+    }
   }
-},
-
 
 };
 

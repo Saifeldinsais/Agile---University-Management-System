@@ -120,9 +120,35 @@ const getAssignmentSubmissions = async (req, res) => {
   }
 };
 
+const gradeSubmission = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || (user.role !== 'staff' && user.role !== 'doctor')) {
+      return res.status(403).json({ status: 'fail', message: 'Only instructors can grade submissions' });
+    }
+
+    const { submission_id } = req.params;
+    const { grade, feedback } = req.body;
+
+    if (!submission_id) {
+      return res.status(400).json({ status: 'fail', message: 'Submission ID is required' });
+    }
+
+    if (grade === undefined || grade === null) {
+      return res.status(400).json({ status: 'fail', message: 'Grade is required' });
+    }
+
+    const result = await assignmentSubmissionService.gradeSubmission(submission_id, grade, feedback || '');
+    res.status(200).json({ status: 'success', message: 'Submission graded successfully', data: result });
+  } catch (error) {
+    res.status(500).json({ status: 'fail', message: error.message });
+  }
+};
+
 module.exports = {
   submitAssignment,
   getStudentAssignments,
   getSubmission,
-  getAssignmentSubmissions
+  getAssignmentSubmissions,
+  gradeSubmission
 };

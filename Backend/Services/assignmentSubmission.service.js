@@ -174,6 +174,95 @@ const assignmentSubmissionService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  gradeSubmission: async (submission_id, grade, feedback) => {
+    try {
+      // Verify submission exists
+      const [submission] = await pool.query(
+        "SELECT * FROM assignment_submission_entity WHERE entity_id = ?",
+        [submission_id]
+      );
+
+      if (!submission || submission.length === 0) {
+        throw new Error("Submission not found");
+      }
+
+      // Get attribute IDs for grade and feedback
+      const [[gradeAttr]] = await pool.query(
+        "SELECT attribute_id FROM assignment_submission_attributes WHERE attribute_name = 'grade' LIMIT 1"
+      );
+      const [[feedbackAttr]] = await pool.query(
+        "SELECT attribute_id FROM assignment_submission_attributes WHERE attribute_name = 'feedback' LIMIT 1"
+      );
+
+      // Upsert grade
+      if (gradeAttr?.attribute_id && grade !== null && grade !== undefined) {
+        const [[existingGrade]] = await pool.query(
+          "SELECT value_id FROM assignment_submission_entity_attribute WHERE entity_id = ? AND attribute_id = ? LIMIT 1",
+          [submission_id, gradeAttr.attribute_id]
+        );
+
+        if (existingGrade?.value_id) {
+          await pool.query(
+            "UPDATE assignment_submission_entity_attribute SET value_number = ? WHERE value_id = ?",
+            [grade, existingGrade.value_id]
+          );
+        } else {
+          await pool.query(
+            "INSERT INTO assignment_submission_entity_attribute (entity_id, attribute_id, value_number) VALUES (?, ?, ?)",
+            [submission_id, gradeAttr.attribute_id, grade]
+          );
+        }
+      }
+
+      // Upsert feedback
+      if (feedbackAttr?.attribute_id && feedback !== null && feedback !== undefined) {
+        const [[existingFeedback]] = await pool.query(
+          "SELECT value_id FROM assignment_submission_entity_attribute WHERE entity_id = ? AND attribute_id = ? LIMIT 1",
+          [submission_id, feedbackAttr.attribute_id]
+        );
+
+        if (existingFeedback?.value_id) {
+          await pool.query(
+            "UPDATE assignment_submission_entity_attribute SET value_string = ? WHERE value_id = ?",
+            [feedback, existingFeedback.value_id]
+          );
+        } else {
+          await pool.query(
+            "INSERT INTO assignment_submission_entity_attribute (entity_id, attribute_id, value_string) VALUES (?, ?, ?)",
+            [submission_id, feedbackAttr.attribute_id, feedback]
+          );
+        }
+      }
+
+      // Update submission status to 'graded'
+      const [[statusAttr]] = await pool.query(
+        "SELECT attribute_id FROM assignment_submission_attributes WHERE attribute_name = 'submission_status' LIMIT 1"
+      );
+      if (statusAttr?.attribute_id) {
+        const [[existingStatus]] = await pool.query(
+          "SELECT value_id FROM assignment_submission_entity_attribute WHERE entity_id = ? AND attribute_id = ? LIMIT 1",
+          [submission_id, statusAttr.attribute_id]
+        );
+
+        if (existingStatus?.value_id) {
+          await pool.query(
+            "UPDATE assignment_submission_entity_attribute SET value_string = 'graded' WHERE value_id = ?",
+            [existingStatus.value_id]
+          );
+        } else {
+          await pool.query(
+            "INSERT INTO assignment_submission_entity_attribute (entity_id, attribute_id, value_string) VALUES (?, ?, 'graded')",
+            [submission_id, statusAttr.attribute_id]
+          );
+        }
+      }
+
+      return { success: true, message: "Submission graded successfully" };
+    } catch (error) {
+      throw error;
+    }
   }
 };
 
